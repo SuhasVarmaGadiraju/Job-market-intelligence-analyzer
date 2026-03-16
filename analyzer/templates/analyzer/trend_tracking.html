@@ -1,0 +1,72 @@
+{% extends 'analyzer/base_app.html' %}
+
+{% block title %}Trend Tracking{% endblock %}
+
+{% block app_title %}Trend Tracking{% endblock %}
+
+{% block content %}
+    <div class="page">
+        <div class="card">
+            <div class="card-title">Trend Tracking</div>
+            <div class="card-desc">Monitor skill demand and technology trends over time.</div>
+
+            <div style="height:14px"></div>
+
+            <div class="filters">
+                <div class="filter">
+                    <label class="filter-label" for="filter-role">Select Role</label>
+                    <select class="filter-select" id="filter-role" name="role">
+                        <option value="">All roles</option>
+                        <option value="data_analyst">Data Analyst</option>
+                        <option value="data_scientist">Data Scientist</option>
+                        <option value="software_engineer">Software Engineer</option>
+                    </select>
+                </div>
+
+                <div class="filter">
+                    <label class="filter-label" for="filter-range">Select Time Range</label>
+                    <select class="filter-select" id="filter-range" name="range">
+                        <option value="3m">3 months</option>
+                        <option value="6m">6 months</option>
+                        <option value="1y" selected>1 year</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div style="height:16px"></div>
+
+        <div class="card">
+            <div class="card-title">Monthly Skill Demand Trend</div>
+            <div class="card-desc">(Placeholder) Line chart container ready for Chart.js.</div>
+            <div style="height:14px"></div>
+
+            <div class="trend-grid">
+                <div class="chart-box" id="chart-skill-trend"></div>
+                <div>
+                    <div class="card list-card" style="margin-bottom:14px">
+                        <div class="list-title">Rising Skills</div>
+                        <div class="pill-list">
+                            <div class="pill">Python <small>+18%</small></div>
+                            <div class="pill">SQL <small>+14%</small></div>
+                            <div class="pill">Power BI <small>+12%</small></div>
+                            <div class="pill">AWS <small>+10%</small></div>
+                            <div class="pill">Docker <small>+9%</small></div>
+                        </div>
+                    </div>
+
+                    <div class="card list-card">
+                        <div class="list-title">Declining Skills</div>
+                        <div class="pill-list">
+                            <div class="pill">jQuery <small>-8%</small></div>
+                            <div class="pill">PHP <small>-7%</small></div>
+                            <div class="pill">Perl <small>-6%</small></div>
+                            <div class="pill">Flash <small>-6%</small></div>
+                            <div class="pill">VB.NET <small>-5%</small></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

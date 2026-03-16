@@ -1,0 +1,42 @@
+{% extends 'analyzer/base_app.html' %}
+
+{% block title %}Profile{% endblock %}
+
+{% block app_title %}Profile{% endblock %}
+
+{% block content %}
+    <div class="page">
+        <div class="card">
+            <div class="card-title">Account</div>
+            <div class="card-desc">Your profile information.</div>
+
+            <div style="height:16px"></div>
+
+            <div class="kv-grid">
+                <div class="kv-item">
+                    <div class="kv-label">Username</div>
+                    <div class="kv-value">{{ request.user.username }}</div>
+                </div>
+                <div class="kv-item">
+                    <div class="kv-label">Email</div>
+                    <div class="kv-value">{{ request.user.email|default:"—" }}</div>
+                </div>
+                <div class="kv-item">
+                    <div class="kv-label">Date Joined</div>
+                    <div class="kv-value">{{ request.user.date_joined }}</div>
+                </div>
+                <div class="kv-item">
+                    <div class="kv-label">Last Login</div>
+                    <div class="kv-value">{{ request.user.last_login|default:"—" }}</div>
+                </div>
+            </div>
+
+            <div style="height:18px"></div>
+
+            <div class="btn-row">
+                <a class="btn btn-secondary" href="{% url 'settings' %}">Edit profile</a>
+                <a class="btn btn-primary" href="{% url 'password_change' %}">Change password</a>
+            </div>
+        </div>
+    </div>
+{% endblock %}

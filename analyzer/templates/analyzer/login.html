@@ -1,0 +1,50 @@
+{% extends 'analyzer/base_public.html' %}
+
+{% load static %}
+
+{% block title %}Sign in{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'analyzer/auth.css' %}">
+{% endblock %}
+
+{% block body_class %}auth-page{% endblock %}
+
+{% block navbar %}{% endblock %}
+
+{% block content %}
+    <div class="auth-wrap">
+        <div class="auth-brand">Job Market Intelligence Analyzer</div>
+        <div class="auth-card">
+            <h1 class="auth-title">Sign in with email</h1>
+
+            {% if user.is_authenticated %}
+                <h2 class="auth-title">Already Logged In</h2>
+                <p class="auth-subtitle">You are already logged in as {{ user.username }}.</p>
+                <a href="/dashboard/" class="auth-link">Go to Dashboard</a>
+            {% else %}
+                {% if login_error %}
+                    <div class="auth-error">Invalid username or password. Please try again.</div>
+                {% endif %}
+
+                <form method="POST" class="auth-form">
+                    {% csrf_token %}
+
+                    <div class="auth-field">
+                        <input type="text" name="username" class="auth-input" placeholder="Email" required>
+                    </div>
+
+                    <div class="auth-field">
+                        <input type="password" name="password" class="auth-input" placeholder="Password" required>
+                    </div>
+
+                    <button type="submit" class="auth-button">Sign In</button>
+                </form>
+
+                <div class="auth-bottom">
+                    <a href="/register/" class="auth-link">Sign Up</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

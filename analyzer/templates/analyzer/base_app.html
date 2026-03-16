@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Job Market Intelligence Analyzer{% endblock %}</title>
+    {% load static %}
+    <script>
+        (function(){
+            try{
+                var t = localStorage.getItem('theme');
+                if(t === 'dark') document.documentElement.classList.add('dark');
+            }catch(e){}
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'analyzer/main.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="dashboard-body {% block body_class %}{% endblock %}">
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-inner">
+                <a href="{% url 'home' %}" class="sidebar-brand">Job Market Intelligence Analyzer</a>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-label">Main</div>
+                    <a class="sidebar-link {% if active_page == 'dashboard' %}is-active{% endif %}" href="{% url 'dashboard' %}">Dashboard</a>
+                    <a class="sidebar-link {% if active_page == 'role' %}is-active{% endif %}" href="{% url 'role' %}">Role Intelligence</a>
+                    <a class="sidebar-link {% if active_page == 'skill_gap' %}is-active{% endif %}" href="{% url 'skill_gap' %}">Skill Gap</a>
+                    <a class="sidebar-link {% if active_page == 'salary' %}is-active{% endif %}" href="{% url 'salary' %}">Salary Insights</a>
+                    <a class="sidebar-link {% if active_page == 'trend_tracking' %}is-active{% endif %}" href="{% url 'trend_tracking' %}">Trend Tracking</a>
+                </div>
+
+                <div class="sidebar-section sidebar-section-bottom">
+                    <div class="sidebar-label">Account</div>
+                    <a class="sidebar-link" href="{% url 'logout' %}">Logout</a>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="app-header">
+                <div class="app-header-left">
+                    {% block app_header_left %}
+                        <h1 class="app-title">{% block app_title %}{% endblock %}</h1>
+                    {% endblock %}
+                </div>
+                <div class="app-header-right">
+                    <div class="app-actions">
+                        <button type="button" class="info-btn" aria-label="About This Project" aria-haspopup="dialog" aria-expanded="false" data-info-open>
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M12 22a10 10 0 110-20 10 10 0 010 20Z" stroke="currentColor" stroke-width="2"/>
+                                <path d="M12 17v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M12 8h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+
+                        <button type="button" class="theme-toggle" aria-label="Toggle theme" aria-pressed="false" data-theme-toggle>
+                            <span class="theme-toggle-thumb" aria-hidden="true"></span>
+                            <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 18a6 6 0 100-12 6 6 0 000 12Z" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M12 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M12 20v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M4.93 4.93l1.41 1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M17.66 17.66l1.41 1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M2 12h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M20 12h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M4.93 19.07l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <path d="M17.66 6.34l1.41-1.41" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                            <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M21 13.4A8.1 8.1 0 1110.6 3a6.5 6.5 0 0010.4 10.4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                        </button>
+
+                        {% if user.is_authenticated %}
+                            <div class="profile" data-profile>
+                                <button type="button" class="profile-btn" aria-haspopup="menu" aria-expanded="false" data-profile-toggle>
+                                    <div class="avatar" aria-hidden="true">
+                                        <span class="avatar-initial">{{ user.username|slice:"0:1"|upper }}</span>
+                                    </div>
+                                    <div class="profile-meta">
+                                        <div class="profile-name">{{ user.username|truncatechars:18 }}</div>
+                                    </div>
+                                    <svg class="caret" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                        <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+
+                                <div class="profile-dropdown" role="menu" aria-label="Profile menu" data-profile-menu>
+                                    <a class="dropdown-item" href="{% url 'profile' %}" role="menuitem">Profile</a>
+                                    <a class="dropdown-item" href="{% url 'settings' %}" role="menuitem">Settings</a>
+                                    <a class="dropdown-item" href="{% url 'activity' %}" role="menuitem">My Activity</a>
+                                    <div class="dropdown-divider" role="separator"></div>
+                                    <a class="dropdown-item is-danger" href="{% url 'logout' %}" role="menuitem">Logout</a>
+                                </div>
+                            </div>
+                        {% else %}
+                            <a class="btn" href="{% url 'login' %}">Login</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </header>
+
+            <div class="app-content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <div class="mini-modal-overlay" data-info-modal aria-hidden="true">
+        <div class="mini-modal" role="dialog" aria-modal="true" aria-label="About This Project">
+            <div class="mini-modal-head">
+                <div class="mini-modal-title">About This Project</div>
+                <button type="button" class="mini-modal-close" aria-label="Close" data-info-close>×</button>
+            </div>
+            <div class="mini-modal-body">
+                Job Market Intelligence Analyzer is a data-driven platform that analyzes job trends, skill demand, salary insights, and technology growth to help users make smarter career decisions.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function(){
+            var profileRoot = document.querySelector('[data-profile]');
+            var infoOpen = document.querySelector('[data-info-open]');
+            var infoModal = document.querySelector('[data-info-modal]');
+            var infoClose = document.querySelector('[data-info-close]');
+            var themeToggle = document.querySelector('[data-theme-toggle]');
+
+            function closeProfile(){
+                if(!profileRoot) return;
+                profileRoot.classList.remove('is-open');
+                var t = profileRoot.querySelector('[data-profile-toggle]');
+                if(t) t.setAttribute('aria-expanded','false');
+            }
+
+            function openProfile(){
+                if(!profileRoot) return;
+                closeInfo();
+                profileRoot.classList.add('is-open');
+                var t = profileRoot.querySelector('[data-profile-toggle]');
+                if(t) t.setAttribute('aria-expanded','true');
+            }
+
+            function closeInfo(){
+                if(infoModal){
+                    infoModal.classList.remove('is-open');
+                    infoModal.setAttribute('aria-hidden','true');
+                }
+                if(infoOpen) infoOpen.setAttribute('aria-expanded','false');
+            }
+
+            function openInfo(){
+                if(!infoModal) return;
+                closeProfile();
+                infoModal.classList.add('is-open');
+                infoModal.setAttribute('aria-hidden','false');
+                if(infoOpen) infoOpen.setAttribute('aria-expanded','true');
+            }
+
+            function setTheme(mode){
+                var isDark = mode === 'dark';
+                document.documentElement.classList.toggle('dark', isDark);
+                if(themeToggle) themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+                try{ localStorage.setItem('theme', isDark ? 'dark' : 'light'); }catch(err){}
+                var themeCheckbox = document.querySelector('[data-theme-checkbox]');
+                if(themeCheckbox) themeCheckbox.checked = isDark;
+            }
+
+            function initTheme(){
+                var saved = null;
+                try{ saved = localStorage.getItem('theme'); }catch(err){}
+                if(saved === 'dark') setTheme('dark');
+                else setTheme('light');
+            }
+
+            if(profileRoot){
+                var profileToggle = profileRoot.querySelector('[data-profile-toggle]');
+                var profileMenu = profileRoot.querySelector('[data-profile-menu]');
+                if(profileToggle && profileMenu){
+                    profileToggle.addEventListener('click', function(e){
+                        e.stopPropagation();
+                        if(profileRoot.classList.contains('is-open')) closeProfile();
+                        else openProfile();
+                    });
+                }
+            }
+
+            if(infoOpen && infoModal){
+                infoOpen.addEventListener('click', function(e){
+                    e.stopPropagation();
+                    if(infoModal.classList.contains('is-open')) closeInfo();
+                    else openInfo();
+                });
+            }
+
+            if(infoClose){
+                infoClose.addEventListener('click', function(e){
+                    e.stopPropagation();
+                    closeInfo();
+                });
+            }
+
+            if(infoModal){
+                infoModal.addEventListener('click', function(e){
+                    if(e.target === infoModal) closeInfo();
+                });
+            }
+
+            if(themeToggle){
+                initTheme();
+                themeToggle.addEventListener('click', function(e){
+                    e.stopPropagation();
+                    var isDark = document.documentElement.classList.contains('dark');
+                    setTheme(isDark ? 'light' : 'dark');
+                });
+            }else{
+                initTheme();
+            }
+
+            var themeCheckbox = document.querySelector('[data-theme-checkbox]');
+            if(themeCheckbox){
+                themeCheckbox.addEventListener('change', function(){
+                    setTheme(themeCheckbox.checked ? 'dark' : 'light');
+                });
+            }
+
+            document.addEventListener('click', function(e){
+                if(profileRoot && !profileRoot.contains(e.target)) closeProfile();
+                if(infoModal && infoModal.classList.contains('is-open') && infoOpen && !infoOpen.contains(e.target)){
+                    if(!infoModal.contains(e.target)) closeInfo();
+                }
+            });
+
+            document.addEventListener('keydown', function(e){
+                if(e.key === 'Escape'){
+                    closeProfile();
+                    closeInfo();
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

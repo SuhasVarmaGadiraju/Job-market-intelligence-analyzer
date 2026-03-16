@@ -1,0 +1,905 @@
+{% extends 'analyzer/base_app.html' %}
+
+{% block title %}Skill Gap Analysis{% endblock %}
+
+{% block app_title %}Skill Gap Analysis{% endblock %}
+
+{% block content %}
+    <div class="page skill-gap-page">
+        <!-- Input Form Card -->
+        <div class="card skill-gap-form-card">
+            <div class="card-title">Analyze Your Skill Gap</div>
+            <div class="card-desc">Compare your skills against job market requirements for any role.</div>
+            
+            <form method="get" action="{% url 'skill_gap' %}" class="skill-gap-form" id="skillGapForm">
+                
+                <div class="form-row">
+                    <div class="form-group role-group">
+                        <label for="targetRole">Target Role</label>
+                        <select name="role" id="targetRole" class="form-select" required>
+                            <option value="">Search for a role...</option>
+                            {% for role_opt in role_options %}
+                            <option value="{{ role_opt }}" {% if target_role == role_opt %}selected{% endif %}>{{ role_opt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="experienceLevel">Your Experience Level</label>
+                        <select name="experience" id="experienceLevel" class="form-select experience-select" required>
+                            <option value="">Select experience...</option>
+                            <option value="0-2" {% if experience_level == "0-2" %}selected{% endif %}>0-2 years (Entry)</option>
+                            <option value="2-5" {% if experience_level == "2-5" %}selected{% endif %}>2-5 years (Mid)</option>
+                            <option value="5+" {% if experience_level == "5+" %}selected{% endif %}>5+ years (Senior)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="userSkills">Your Skills (comma-separated)</label>
+                    <textarea 
+                        name="skills" 
+                        id="userSkills" 
+                        class="form-textarea" 
+                        rows="4" 
+                        placeholder="e.g., Python, Django, JavaScript, React, SQL, AWS"
+                        required
+                    >{{ user_skills_raw|default:"" }}</textarea>
+                    <span class="form-hint">Enter skills separated by commas</span>
+                </div>
+                
+                <button type="submit" class="btn btn-primary analyze-btn" id="analyzeBtn">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="btn-icon">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span class="analyze-btn-text">Analyze Gap</span>
+                </button>
+            </form>
+        </div>
+
+        <div id="skillGapResults">
+            {% include 'analyzer/partials/skill_gap_results.html' with analysis=analysis %}
+        </div>
+    </div>
+
+    <!-- Tom Select CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Tom Select on role dropdown with optimized UX
+            var roleSelect = document.getElementById('targetRole');
+            if (roleSelect && typeof TomSelect !== 'undefined') {
+                var tsInstance = new TomSelect(roleSelect, {
+                    create: false,
+                    shouldSort: false,
+                    placeholder: 'Search for a role...',
+                    allowEmptyOption: true,
+                    maxItems: 1,
+                    maxOptions: null,
+                    searchField: ['text'],
+                    highlight: true,
+                    openOnFocus: true,
+                    preload: true,
+                    loadThrottle: 50,
+                    selectOnTab: true,
+                    hideSelected: false,
+                    closeAfterSelect: true,
+                    plugins: ['clear_button'],
+                    render: {
+                        option: function(data, escape) {
+                            return '<div class="ts-option">' + escape(data.text) + '</div>';
+                        },
+                        item: function(data, escape) {
+                            return '<div class="ts-item">' + escape(data.text) + '</div>';
+                        }
+                    },
+                    onInitialize: function() {
+                        updateTomSelectTheme();
+                    }
+                });
+                
+                window.roleSelectInstance = tsInstance;
+            }
+            
+            function updateTomSelectTheme() {
+                var isDark = document.documentElement.classList.contains('dark');
+                document.querySelectorAll('.ts-control, .ts-dropdown').forEach(function(el) {
+                    el.classList.toggle('ts-dark', isDark);
+                });
+            }
+            
+            var themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    setTimeout(updateTomSelectTheme, 50);
+                });
+            }
+            
+            updateTomSelectTheme();
+            
+            var salaryBoostChart = null;
+
+            function axisColor(){
+                return document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,0.65)' : 'rgba(71,85,105,0.75)';
+            }
+
+            function gridColor(){
+                return document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,0.16)' : 'rgba(15,23,42,0.08)';
+            }
+
+            function renderSalaryBoostChart(root){
+                var scope = root || document;
+                var dataEl = scope.getElementById ? scope.getElementById('salaryBoostData') : null;
+                if (!dataEl) {
+                    dataEl = document.getElementById('salaryBoostData');
+                }
+                var canvas = scope.getElementById ? scope.getElementById('salaryBoostChart') : null;
+                if (!canvas) {
+                    canvas = document.getElementById('salaryBoostChart');
+                }
+                if (!dataEl || !canvas || typeof Chart === 'undefined') {
+                    return;
+                }
+
+                var salaryData = [];
+                try {
+                    salaryData = JSON.parse(dataEl.textContent || '[]');
+                } catch (e) {
+                    salaryData = [];
+                }
+
+                var labels = salaryData.map(function(item) { return item.skill; });
+                var values = salaryData.map(function(item) { return item.boost_percent; });
+
+                if (salaryBoostChart) {
+                    salaryBoostChart.destroy();
+                    salaryBoostChart = null;
+                }
+
+                salaryBoostChart = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Salary Boost %',
+                            data: values,
+                            backgroundColor: 'rgba(34, 197, 94, 0.75)',
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            borderWidth: 1,
+                            borderRadius: 8,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'Salary boost: +' + context.parsed.y + '%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: axisColor(),
+                                    maxRotation: 45,
+                                    minRotation: 45,
+                                    autoSkip: false,
+                                    font: { size: 11 }
+                                },
+                                grid: { display: false }
+                            },
+                            y: {
+                                ticks: {
+                                    color: axisColor(),
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                },
+                                grid: { color: gridColor() },
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            renderSalaryBoostChart(document);
+
+            var form = document.getElementById('skillGapForm');
+            var resultsEl = document.getElementById('skillGapResults');
+            var analyzeBtn = document.getElementById('analyzeBtn');
+            var analyzeBtnText = analyzeBtn ? analyzeBtn.querySelector('.analyze-btn-text') : null;
+            var analyzeBtnIcon = analyzeBtn ? analyzeBtn.querySelector('.btn-icon') : null;
+            var originalAnalyzeText = analyzeBtnText ? analyzeBtnText.textContent : '';
+
+            function setLoading(isLoading){
+                if (!analyzeBtn) {
+                    return;
+                }
+                analyzeBtn.disabled = !!isLoading;
+                analyzeBtn.classList.toggle('is-loading', !!isLoading);
+                if (analyzeBtnText) {
+                    analyzeBtnText.textContent = isLoading ? 'Analyzing…' : originalAnalyzeText;
+                }
+                if (analyzeBtnIcon) {
+                    analyzeBtnIcon.classList.toggle('spin', !!isLoading);
+                }
+            }
+
+            if (form && resultsEl) {
+                form.addEventListener('submit', function(e){
+                    e.preventDefault();
+
+                    var role = '';
+                    if (window.roleSelectInstance && window.roleSelectInstance.getValue) {
+                        role = window.roleSelectInstance.getValue() || '';
+                    } else {
+                        var roleSel = document.getElementById('targetRole');
+                        role = roleSel ? (roleSel.value || '') : '';
+                    }
+                    var skills = (document.getElementById('userSkills') || {}).value || '';
+                    var experience = (document.getElementById('experienceLevel') || {}).value || '';
+
+                    setLoading(true);
+
+                    var params = new URLSearchParams({
+                        role: role,
+                        skills: skills,
+                        experience: experience
+                    });
+
+                    fetch('{% url "skill_gap_analyze" %}?' + params.toString(), {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(r){ return r.json(); })
+                    .then(function(payload){
+                        resultsEl.innerHTML = payload.html || '';
+                        renderSalaryBoostChart(document);
+                    })
+                    .catch(function(){
+                        resultsEl.innerHTML = '<div class="card error-card"><div class="error-message">Failed to analyze. Please try again.</div></div>';
+                    })
+                    .finally(function(){
+                        setLoading(false);
+                    });
+                });
+            }
+        })();
+    </script>
+
+    <style>
+        /* Skill Gap Page Styles */
+        .skill-gap-page {
+            max-width: 1200px;
+        }
+        
+        .skill-gap-form-card {
+            margin-bottom: 24px;
+        }
+        
+        .skill-gap-form {
+            margin-top: 20px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+            align-items: start;
+        }
+        
+        .role-group {
+            min-width: 0;
+            overflow: visible;
+        }
+        
+        .role-group .ts-wrapper {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        
+        .role-group .ts-control {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: hidden;
+        }
+        
+        @media (max-width: 640px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+        
+        .form-select,
+        .form-textarea {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+            line-height: 1.6;
+            padding: 14px 16px;
+        }
+        
+        .form-textarea::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+        
+        .dark .form-textarea::placeholder {
+            color: #94a3b8;
+            opacity: 0.8;
+        }
+        
+        /* Enhanced textarea styling for dark mode */
+        .dark .form-textarea {
+            background: #1e293b;
+            border-color: #334155;
+            color: #f1f5f9;
+        }
+        
+        .dark .form-textarea:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        
+        .form-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        
+        .analyze-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        
+        .analyze-btn:disabled {
+            opacity: 0.8;
+            cursor: not-allowed;
+        }
+        
+        .btn-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        .btn-icon.spin {
+            animation: sg-spin 0.9s linear infinite;
+        }
+
+        @keyframes sg-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Gap Summary Card */
+        .gap-summary-card {
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--card-bg) 0%, var(--card-bg-secondary, var(--card-bg)) 100%);
+        }
+        
+        .gap-summary-header {
+            margin-bottom: 20px;
+        }
+        
+        .gap-summary-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .gap-summary-role {
+            font-size: 14px;
+            color: var(--accent);
+            font-weight: 500;
+            margin-top: 4px;
+        }
+        
+        .gap-metrics-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        @media (max-width: 768px) {
+            .gap-metrics-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .gap-metric {
+            text-align: center;
+            padding: 16px;
+            background: var(--bg-color);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .gap-metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+        
+        .gap-metric-value.ready {
+            color: #22c55e;
+        }
+        
+        .gap-metric-value.moderate {
+            color: #f59e0b;
+        }
+        
+        .gap-metric-value.high {
+            color: #ef4444;
+        }
+        
+        .dark .gap-metric-value.ready {
+            color: #4ade80;
+        }
+        
+        .dark .gap-metric-value.moderate {
+            color: #fbbf24;
+        }
+        
+        .dark .gap-metric-value.high {
+            color: #f87171;
+        }
+        
+        .gap-metric-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .insight-box {
+            display: flex;
+            gap: 12px;
+            padding: 16px;
+            background: rgba(37, 99, 235, 0.08);
+            border-radius: 12px;
+            border-left: 4px solid var(--accent);
+        }
+        
+        .dark .insight-box {
+            background: rgba(37, 99, 235, 0.15);
+        }
+        
+        .insight-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            color: var(--accent);
+        }
+        
+        .insight-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .insight-text {
+            font-size: 14px;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+        
+        /* Skills Breakdown Grid */
+        .skills-breakdown-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        @media (max-width: 768px) {
+            .skills-breakdown-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .skills-card {
+            padding: 20px;
+        }
+        
+        .skills-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        
+        .skills-card-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .skills-card-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .skills-card-icon.success {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+        }
+        
+        .dark .skills-card-icon.success {
+            background: rgba(34, 197, 94, 0.25);
+            color: #4ade80;
+        }
+        
+        .skills-card-icon.danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+        
+        .dark .skills-card-icon.danger {
+            background: rgba(239, 68, 68, 0.25);
+            color: #f87171;
+        }
+        
+        .skills-card-icon.warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+        
+        .dark .skills-card-icon.warning {
+            background: rgba(245, 158, 11, 0.25);
+            color: #fbbf24;
+        }
+        
+        .skills-card-icon.info {
+            background: rgba(59, 130, 246, 0.15);
+            color: #3b82f6;
+        }
+        
+        .dark .skills-card-icon.info {
+            background: rgba(59, 130, 246, 0.25);
+            color: #60a5fa;
+        }
+        
+        .skills-card-title {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .skills-card-count {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            background: var(--bg-color);
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+        
+        .skills-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .skill-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: transform 0.15s;
+        }
+        
+        .skill-tag:hover {
+            transform: translateY(-1px);
+        }
+        
+        .skill-tag.success {
+            background: rgba(34, 197, 94, 0.15);
+            color: #15803d;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .dark .skill-tag.success {
+            background: rgba(34, 197, 94, 0.25);
+            color: #4ade80;
+            border-color: rgba(34, 197, 94, 0.4);
+        }
+        
+        .skill-tag.danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #b91c1c;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .dark .skill-tag.danger {
+            background: rgba(239, 68, 68, 0.25);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+        
+        .skill-tag.warning {
+            background: rgba(245, 158, 11, 0.15);
+            color: #b45309;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        
+        .dark .skill-tag.warning {
+            background: rgba(245, 158, 11, 0.25);
+            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+        
+        .skill-tag.info {
+            background: rgba(59, 130, 246, 0.15);
+            color: #1d4ed8;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .dark .skill-tag.info {
+            background: rgba(59, 130, 246, 0.25);
+            color: #60a5fa;
+            border-color: rgba(59, 130, 246, 0.4);
+        }
+        
+        .empty-state {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        /* Salary Boost Card */
+        .salary-boost-card {
+            margin-bottom: 24px;
+        }
+        
+        .salary-boost-header {
+            margin-bottom: 20px;
+        }
+        
+        .salary-boost-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .salary-boost-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+        
+        .salary-chart-container {
+            height: 220px;
+            margin-bottom: 20px;
+        }
+        
+        .salary-boost-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .salary-boost-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .salary-boost-skill {
+            width: 140px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            flex-shrink: 0;
+        }
+        
+        .salary-boost-bar-container {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .salary-boost-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #4ade80);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .salary-boost-value {
+            width: 60px;
+            text-align: right;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+        
+        .salary-boost-value.positive {
+            color: #22c55e;
+        }
+        
+        .dark .salary-boost-value.positive {
+            color: #4ade80;
+        }
+        
+        /* Error Card */
+        .error-card {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .error-message {
+            color: #ef4444;
+            font-weight: 500;
+        }
+        
+        .dark .error-card {
+            background: rgba(239, 68, 68, 0.15);
+        }
+        
+        /* Tom Select Dark Mode Overrides */
+        .ts-control {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+            border-radius: 8px !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .ts-control input {
+            color: var(--text-primary) !important;
+        }
+        
+        .ts-control .item {
+            color: var(--text-primary) !important;
+        }
+        
+        .ts-dropdown {
+            background-color: #ffffff !important;
+            border-color: #e5e7eb !important;
+            border-radius: 8px !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12) !important;
+            z-index: 10000 !important;
+            position: absolute !important;
+            margin-top: 6px;
+            max-height: 350px;
+            overflow-y: auto;
+            color: #111827 !important;
+            transition: opacity 120ms ease, transform 120ms ease;
+            transform: translateY(2px);
+        }
+
+        .ts-wrapper.dropdown-active .ts-dropdown {
+            transform: translateY(0);
+        }
+
+        .ts-dropdown .option {
+            color: #111827 !important;
+        }
+
+        .ts-dropdown .option:hover,
+        .ts-dropdown .option.active {
+            background-color: #e0f2fe !important;
+            color: #111827 !important;
+        }
+
+        .ts-control {
+            background-color: #ffffff !important;
+            border-color: #d1d5db !important;
+            color: #111827 !important;
+        }
+
+        .ts-control input {
+            color: #111827 !important;
+        }
+        
+        .ts-dropdown-content {
+            max-height: none !important;
+            overflow-y: visible !important;
+        }
+        
+        .ts-dropdown {
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .dark .ts-control {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+        }
+        
+        .dark .ts-dropdown {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+        }
+        
+        .dark .ts-dropdown .option {
+            color: #f1f5f9 !important;
+        }
+        
+        .dark .ts-dropdown .option:hover,
+        .dark .ts-dropdown .active {
+            background-color: #2563eb !important;
+            color: white !important;
+        }
+        
+        /* Native Select Dark Mode Fixes */
+        .experience-select {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+        }
+        
+        .experience-select option {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            padding: 8px;
+        }
+        
+        .dark .experience-select {
+            background-color: #1e293b;
+            color: #f1f5f9;
+        }
+        
+        .dark .experience-select option {
+            background-color: #1e293b;
+            color: #f1f5f9;
+        }
+        
+        .role-group {
+            min-width: 0;
+        }
+    </style>
+{% endblock %}

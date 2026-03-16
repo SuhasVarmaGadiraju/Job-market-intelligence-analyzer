@@ -1,0 +1,153 @@
+{% if analysis %}
+{% if analysis.error %}
+<div class="card error-card">
+    <div class="error-message">{{ analysis.error }}</div>
+</div>
+{% else %}
+<div class="card gap-summary-card">
+    <div class="gap-summary-header">
+        <div class="gap-summary-title">Gap Analysis Results</div>
+        <div class="gap-summary-role">for {{ analysis.target_role }}</div>
+    </div>
+
+    <div class="gap-metrics-row">
+        <div class="gap-metric">
+            <div class="gap-metric-value {{ analysis.readiness_class }}">{{ analysis.gap_score }}%</div>
+            <div class="gap-metric-label">Gap Score</div>
+        </div>
+        <div class="gap-metric">
+            <div class="gap-metric-value {{ analysis.readiness_class }}">{{ analysis.readiness }}</div>
+            <div class="gap-metric-label">Readiness</div>
+        </div>
+        <div class="gap-metric">
+            <div class="gap-metric-value">{{ analysis.matching_core|length }}/{{ analysis.total_core }}</div>
+            <div class="gap-metric-label">Core Skills</div>
+        </div>
+        <div class="gap-metric">
+            <div class="gap-metric-value">{{ analysis.total_jobs_analyzed }}</div>
+            <div class="gap-metric-label">Jobs Analyzed</div>
+        </div>
+    </div>
+
+    {% if analysis.classification_note %}
+    <div class="insight-box" style="margin-top: 16px; background: rgba(245, 158, 11, 0.08); border-left-color: #f59e0b;">
+        <div class="insight-icon" style="color: #f59e0b;">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <div class="insight-text">{{ analysis.classification_note }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="skills-breakdown-grid">
+    <div class="card skills-card matching-card">
+        <div class="skills-card-header">
+            <div class="skills-card-icon success">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="skills-card-title">Matching Core Skills</div>
+            <div class="skills-card-count">{{ analysis.matching_core|length }}</div>
+        </div>
+        <div class="skills-tags">
+            {% for skill in analysis.matching_core %}
+            <span class="skill-tag success">{{ skill }}</span>
+            {% empty %}
+            <span class="empty-state">No matching core skills</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card skills-card missing-card">
+        <div class="skills-card-header">
+            <div class="skills-card-icon danger">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="skills-card-title">Missing Core Skills</div>
+            <div class="skills-card-count">{{ analysis.missing_core|length }}</div>
+        </div>
+        <div class="skills-tags">
+            {% for skill in analysis.missing_core %}
+            <span class="skill-tag danger">{{ skill }}</span>
+            {% empty %}
+            <span class="empty-state">All core skills matched!</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if analysis.has_gap and analysis.has_important_skills %}
+    <div class="card skills-card matching-card">
+        <div class="skills-card-header">
+            <div class="skills-card-icon info">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="skills-card-title">Matching Important Skills</div>
+            <div class="skills-card-count">{{ analysis.matching_important|length }}</div>
+        </div>
+        <div class="skills-tags">
+            {% for skill in analysis.matching_important %}
+            <span class="skill-tag info">{{ skill }}</span>
+            {% empty %}
+            <span class="empty-state">No matching important skills</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card skills-card important-card">
+        <div class="skills-card-header">
+            <div class="skills-card-icon warning">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="skills-card-title">Important Skills to Learn</div>
+            <div class="skills-card-count">{{ analysis.missing_important|length }}</div>
+        </div>
+        <div class="skills-tags">
+            {% for skill in analysis.missing_important %}
+            <span class="skill-tag warning">{{ skill }}</span>
+            {% empty %}
+            <span class="empty-state">All important skills matched!</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if analysis.salary_boost_skills %}
+<div class="card salary-boost-card">
+    <div class="salary-boost-header">
+        <div class="salary-boost-title">High-Impact Skills to Learn</div>
+        <div class="salary-boost-subtitle">Missing core skills with highest salary impact</div>
+    </div>
+
+    <div class="salary-chart-container">
+        <canvas id="salaryBoostChart"></canvas>
+    </div>
+
+    {{ analysis.salary_boost_skills|json_script:"salaryBoostData" }}
+
+    <div class="salary-boost-list">
+        {% for item in analysis.salary_boost_skills %}
+        <div class="salary-boost-item">
+            <div class="salary-boost-skill">{{ item.skill }}</div>
+            <div class="salary-boost-bar-container">
+                <div class="salary-boost-bar" style="width: {{ item.boost_percent }}%"></div>
+            </div>
+            <div class="salary-boost-value {% if item.boost_percent > 0 %}positive{% else %}negative{% endif %}">
+                {% if item.boost_percent > 0 %}+{% endif %}{{ item.boost_percent }}%
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endif %}

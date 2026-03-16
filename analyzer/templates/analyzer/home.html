@@ -1,0 +1,107 @@
+{% extends 'analyzer/base_public.html' %}
+
+{% block title %}Job Market Intelligence Analyzer{% endblock %}
+
+{% block content %}
+    <main>
+        <section class="hero">
+            <div class="container">
+                <div class="hero-inner">
+                    <h1 class="hero-title">Understand the Job Market. Make <span class="hero-title-gradient">Smarter Career Decisions</span>.</h1>
+                    <p class="hero-subtitle">Analyze job trends, skill demand, and salary insights in one intelligent platform.</p>
+
+                    <div class="hero-actions">
+                        <a class="btn btn-primary" href="/dashboard/">Explore Dashboard</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <h2 class="section-title">Features</h2>
+                <div class="grid-4">
+                    <div class="card">
+                        <div class="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 19V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M4 19H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M8 15V11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M12 15V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M16 15V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="card-title">Role Intelligence</div>
+                        <div class="card-desc">Analyze demand across job roles.</div>
+                    </div>
+                    <div class="card">
+                        <div class="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 3H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M10 3V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M14 3V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M7 11a5 5 0 1 1 10 0v5a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3v-5z" stroke="currentColor" stroke-width="2"/>
+                                <path d="M9 14h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="card-title">Skill Gap Analysis</div>
+                        <div class="card-desc">Identify missing skills for your target role.</div>
+                    </div>
+                    <div class="card">
+                        <div class="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2v20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M17 5H9.5a3.5 3.5 0 1 0 0 7H14.5a3.5 3.5 0 1 1 0 7H7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="card-title">Salary Insights</div>
+                        <div class="card-desc">Compare salaries across roles and locations.</div>
+                    </div>
+                    <div class="card">
+                        <div class="feature-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 17l6-6 4 4 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M21 8v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="card-title">Trend Tracking</div>
+                        <div class="card-desc">Monitor rising and declining technologies.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <h2 class="section-title">How It Works</h2>
+                <div class="steps">
+                    <div class="card">
+                        <div class="step-num">1</div>
+                        <div class="card-title">Collect job data</div>
+                        <div class="card-desc">Collect job postings and salary data from trusted sources.</div>
+                    </div>
+                    <div class="card">
+                        <div class="step-num">2</div>
+                        <div class="card-title">Analyze market trends</div>
+                        <div class="card-desc">Understand role demand, in-demand skills, and compensation trends.</div>
+                    </div>
+                    <div class="card">
+                        <div class="step-num">3</div>
+                        <div class="card-title">Make informed decisions</div>
+                        <div class="card-desc">Use insights to plan learning paths and target the right opportunities.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="footer-inner">
+                    <div class="footer-brand">Job Market Intelligence Analyzer</div>
+                    <div>Analyze job trends, skill demand, and salary insights in one intelligent platform.</div>
+                    <div>&copy; {% now "Y" %} Job Market Intelligence Analyzer. All rights reserved.</div>
+                </div>
+            </div>
+        </footer>
+    </main>
+{% endblock %}

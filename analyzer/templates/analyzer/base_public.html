@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Job Market Intelligence Analyzer{% endblock %}</title>
+    {% load static %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'analyzer/main.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    {% block navbar %}
+        <header class="navbar">
+            <div class="container navbar-inner">
+                <a href="/" class="nav-brand">Job Market Intelligence Analyzer</a>
+
+                <div class="nav-right">
+                    {% if user.is_authenticated %}
+                        <span class="nav-user">{{ user.username }}</span>
+                        <a class="btn btn-secondary" href="{% url 'logout' %}">Logout</a>
+                    {% else %}
+                        <a class="btn btn-secondary" href="{% url 'login' %}">Sign In</a>
+                        <a class="btn btn-primary" href="{% url 'register' %}">Sign Up</a>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+    {% endblock %}
+
+    {% block content %}{% endblock %}
+</body>
+</html>

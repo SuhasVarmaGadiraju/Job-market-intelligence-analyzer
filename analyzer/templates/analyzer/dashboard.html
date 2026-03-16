@@ -1,0 +1,68 @@
+{% extends 'analyzer/base_app.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block app_title %}Dashboard{% endblock %}
+
+{% block content %}
+    <div class="page gated-wrap">
+        <div class="gated-content {% if not user.is_authenticated %}is-blurred is-disabled{% endif %}">
+            <div class="page-header">
+                <p>Here’s a quick snapshot of your job market dataset.</p>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <small>Total Jobs</small>
+                    <div class="stat-number">{{ total_jobs }}</div>
+                </div>
+                <div class="stat-card">
+                    <small>Total Roles</small>
+                    <div class="stat-number">{{ total_roles }}</div>
+                </div>
+                <div class="stat-card">
+                    <small>Total Skills</small>
+                    <div class="stat-number">—</div>
+                </div>
+                <div class="stat-card">
+                    <small>Average Salary</small>
+                    <div class="stat-number">—</div>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <h2>Charts</h2>
+                <p>(Placeholder) Chart containers ready for Chart.js.</p>
+                <div class="charts-grid">
+                    <div class="chart-box" id="chart-overview"></div>
+                    <div class="chart-box" id="chart-roles"></div>
+                </div>
+            </div>
+        </div>
+
+        {% if not user.is_authenticated %}
+            <div class="modal-overlay" role="dialog" aria-modal="true">
+                <div class="modal-card">
+                    <div class="modal-title">Sign in to continue</div>
+                    <div class="modal-subtitle">Access your personalized dashboard by logging in.</div>
+
+                    <form method="POST" action="{% url 'login' %}" class="modal-form">
+                        {% csrf_token %}
+                        <div class="modal-field">
+                            <input type="text" name="username" class="modal-input" placeholder="Email" required>
+                        </div>
+                        <div class="modal-field">
+                            <input type="password" name="password" class="modal-input" placeholder="Password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary modal-button">Sign In</button>
+
+                        <div class="modal-bottom">
+                            <a class="modal-link" href="{% url 'register' %}">Create an account</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

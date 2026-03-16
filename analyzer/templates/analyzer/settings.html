@@ -1,0 +1,48 @@
+{% extends 'analyzer/base_app.html' %}
+
+{% block title %}Settings{% endblock %}
+
+{% block app_title %}Settings{% endblock %}
+
+{% block content %}
+    <div class="page">
+        <div class="card">
+            <div class="card-title">Preferences</div>
+            <div class="card-desc">Manage your application preferences.</div>
+
+            <div style="height:16px"></div>
+
+            <form method="post" class="settings-form">
+                {% csrf_token %}
+
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-title">Theme</div>
+                        <div class="setting-subtitle">Toggle dark mode.</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" data-theme-checkbox>
+                        <span class="switch-ui" aria-hidden="true"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <div>
+                        <div class="setting-title">Notifications</div>
+                        <div class="setting-subtitle">UI only (stored in session).</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" name="notifications" {% if notifications_enabled %}checked{% endif %}>
+                        <span class="switch-ui" aria-hidden="true"></span>
+                    </label>
+                </div>
+
+                <div style="height:18px"></div>
+
+                <div class="btn-row">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

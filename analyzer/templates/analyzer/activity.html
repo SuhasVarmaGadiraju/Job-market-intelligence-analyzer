@@ -1,0 +1,31 @@
+{% extends 'analyzer/base_app.html' %}
+
+{% block title %}My Activity{% endblock %}
+
+{% block app_title %}My Activity{% endblock %}
+
+{% block content %}
+    <div class="page">
+        <div class="card">
+            <div class="card-title">Activity</div>
+            <div class="card-desc">Your recent account activity and usage.</div>
+
+            <div style="height:16px"></div>
+
+            <div class="kv-grid">
+                <div class="kv-item">
+                    <div class="kv-label">Total jobs analyzed</div>
+                    <div class="kv-value">{{ total_jobs }}</div>
+                </div>
+                <div class="kv-item">
+                    <div class="kv-label">Last login</div>
+                    <div class="kv-value">{{ last_login|default:"—" }}</div>
+                </div>
+                <div class="kv-item">
+                    <div class="kv-label">Session visit count</div>
+                    <div class="kv-value">{{ visit_count }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

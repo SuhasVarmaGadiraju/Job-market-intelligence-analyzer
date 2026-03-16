@@ -1,0 +1,657 @@
+{% extends 'analyzer/base_app.html' %}
+
+{% block title %}Salary Insights{% endblock %}
+
+{% block app_title %}Salary Insights{% endblock %}
+
+{% block content %}
+    <div class="page salary-insights">
+        <div class="analytics-toolbar">
+            <div class="analytics-toolbar-left">
+                <div class="analytics-title">Salary Insights</div>
+                <div class="analytics-subtitle">Dataset-driven salary analytics by role, experience, location, and skill signals.</div>
+            </div>
+
+            <div class="analytics-toolbar-right">
+                <label class="select-label" for="salaryRoleSelect">Role</label>
+                <select id="salaryRoleSelect" class="select" name="role">
+                    {% if selected_role %}
+                        <option value="{{ selected_role }}" selected>{{ selected_role }}</option>
+                    {% endif %}
+                </select>
+            </div>
+        </div>
+
+        <div class="role-loading" data-salary-loading aria-hidden="true">
+            <div class="role-loading-card">
+                <div class="role-spinner" aria-hidden="true"></div>
+                <div class="role-loading-text">Updating salary insights…</div>
+            </div>
+        </div>
+
+        {{ initial_data|json_script:"salaryInsightsInitial" }}
+
+        <!-- Empty state: shown when no salary data -->
+        <div class="salary-empty-state" data-empty-state style="display: none;">
+            <div class="empty-state-card">
+                <div class="empty-state-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 8v4M12 16h.01M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="empty-state-title">No salary data available</div>
+                <div class="empty-state-desc">We don't have enough salary information for this role yet. Try selecting a different role or check back later.</div>
+            </div>
+        </div>
+
+        <!-- Salary data content: hidden when no data -->
+        <div class="salary-content" data-salary-content>
+            <div class="salary-count" data-salary-count></div>
+
+            <div class="summary-grid salary-summary">
+                <div class="summary-card">
+                    <div class="summary-head">
+                        <div class="summary-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1v22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M17 6H9.5a3.5 3.5 0 000 7H14a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        </div>
+                        <div class="summary-label">Min Salary</div>
+                    </div>
+                    <div class="summary-value" data-sal-min>—</div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-head">
+                        <div class="summary-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 20V4h16v16H4Z" stroke="currentColor" stroke-width="2"/><path d="M8 16l2-3 3 2 3-5 2 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <div class="summary-label">Average Salary</div>
+                    </div>
+                    <div class="summary-value" data-sal-avg>—</div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-head">
+                        <div class="summary-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        </div>
+                        <div class="summary-label">Max Salary</div>
+                    </div>
+                    <div class="summary-value" data-sal-max>—</div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-head">
+                        <div class="summary-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h16v16H4V4Z" stroke="currentColor" stroke-width="2"/><path d="M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        </div>
+                        <div class="summary-label">Median Salary</div>
+                    </div>
+                    <div class="summary-value" data-sal-median>—</div>
+                </div>
+            </div>
+
+            <div class="section-gap"></div>
+
+            <div class="charts-2col">
+                <div class="card chart-surface">
+                    <div class="card-title">Salary by Experience</div>
+                    <div class="card-desc">Average salary for each experience band.</div>
+                    <div style="height:14px"></div>
+                    <div class="chart-wrap salary-chart-wrap"><canvas id="salaryExperienceChart" height="220"></canvas></div>
+                </div>
+
+                <div class="card chart-surface">
+                    <div class="card-title">Top Paying Cities</div>
+                    <div class="card-desc">Top 5 cities by average salary (min sample size applied).</div>
+                    <div style="height:14px"></div>
+                    <div class="city-list" data-city-list></div>
+                </div>
+            </div>
+
+            <div class="section-gap"></div>
+
+            <div class="card chart-surface">
+                <div class="card-title">Skills That Increase Salary</div>
+                <div class="card-desc">Average salary impact when a skill is present vs not present (role-specific).</div>
+                <div style="height:14px"></div>
+                <div class="salary-impact-list" data-skill-lift-list></div>
+            </div>
+        </div>
+    </div>
+
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var initialEl = document.getElementById('salaryInsightsInitial');
+            var initial = {};
+            try { initial = JSON.parse(initialEl ? (initialEl.textContent || '{}') : '{}'); } catch (e) { initial = {}; }
+
+            var loadingEl = document.querySelector('[data-salary-loading]');
+            var roleSelect = document.getElementById('salaryRoleSelect');
+
+            var minEl = document.querySelector('[data-sal-min]');
+            var avgEl = document.querySelector('[data-sal-avg]');
+            var maxEl = document.querySelector('[data-sal-max]');
+            var medianEl = document.querySelector('[data-sal-median]');
+            var countEl = document.querySelector('[data-sal-count]');
+            var cityListEl = document.querySelector('[data-city-list]');
+            var skillLiftEl = document.querySelector('[data-skill-lift-list]');
+            var salaryContentEl = document.querySelector('[data-salary-content]');
+            var emptyStateEl = document.querySelector('[data-empty-state]');
+            var salaryCountEl = document.querySelector('[data-salary-count]');
+
+            var salaryExpChart = null;
+            var lastPayload = initial || {};
+
+            function setLoading(isLoading){
+                if (!loadingEl) return;
+                loadingEl.setAttribute('aria-hidden', isLoading ? 'false' : 'true');
+                loadingEl.classList.toggle('is-active', !!isLoading);
+            }
+
+            function fmtMoney(v){
+                if (v === null || v === undefined) return '—';
+                var n = Number(v);
+                if (!isFinite(n)) return '—';
+                return n.toLocaleString(undefined, {maximumFractionDigits: 0});
+            }
+
+            function axisColor(){
+                return document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,0.65)' : 'rgba(71,85,105,0.75)';
+            }
+
+            function gridColor(){
+                return document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,0.16)' : 'rgba(15,23,42,0.08)';
+            }
+
+            function hasSalaryData(payload){
+                var summary = (payload || {}).summary || {};
+                var count = summary.total_jobs_with_salary || 0;
+                return count > 0;
+            }
+
+            function setContentVisibility(hasData){
+                if (salaryContentEl) {
+                    salaryContentEl.style.display = hasData ? 'block' : 'none';
+                }
+                if (emptyStateEl) {
+                    emptyStateEl.style.display = hasData ? 'none' : 'block';
+                }
+            }
+
+            function updateSalaryCount(summary){
+                if (!salaryCountEl) return;
+                var count = summary.total_jobs_with_salary || 0;
+                if (count > 0) {
+                    salaryCountEl.textContent = count + ' job' + (count === 1 ? '' : 's') + ' with salary data';
+                    salaryCountEl.style.display = 'block';
+                } else {
+                    salaryCountEl.style.display = 'none';
+                }
+            }
+
+            function renderSalaryByExperience(data){
+                var canvas = document.getElementById('salaryExperienceChart');
+                if (!canvas || typeof Chart === 'undefined') return;
+
+                var rows = Array.isArray(data) ? data : [];
+                if (!rows.length) {
+                    rows = [{band: 'No data', avg_salary: 0, jobs: 0}];
+                }
+                var labels = rows.map(function(r){ return r.band; });
+                var values = rows.map(function(r){ return Number(r.avg_salary || 0); });
+
+                if (salaryExpChart) {
+                    salaryExpChart.destroy();
+                    salaryExpChart = null;
+                }
+
+                salaryExpChart = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Avg Salary',
+                            data: values,
+                            backgroundColor: 'rgba(59, 130, 246, 0.75)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1,
+                            borderRadius: 8,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { color: axisColor() }, grid: { display: false } },
+                            y: { ticks: { color: axisColor() }, grid: { color: gridColor() }, beginAtZero: true }
+                        }
+                    }
+                });
+            }
+
+            function renderTopCities(rows){
+                if (!cityListEl) return;
+                var data = Array.isArray(rows) ? rows : [];
+                if (!data.length) {
+                    cityListEl.innerHTML = '<div class="empty-state">No location salary data available.</div>';
+                    return;
+                }
+                cityListEl.innerHTML = data.map(function(r){
+                    return (
+                        '<div class="city-row">'
+                        + '<div class="city-name">' + (r.city || '—') + '</div>'
+                        + '<div class="city-meta">' + fmtMoney(r.avg_salary) + '</div>'
+                        + '<div class="city-jobs">' + (r.jobs || 0) + ' jobs</div>'
+                        + '</div>'
+                    );
+                }).join('');
+            }
+
+            function renderSkillLift(rows){
+                if (!skillLiftEl) return;
+                var data = Array.isArray(rows) ? rows : [];
+                if (!data.length) {
+                    skillLiftEl.innerHTML = '<div class="empty-state">No skill salary lift signals available.</div>';
+                    return;
+                }
+
+                skillLiftEl.innerHTML = data.slice(0, 10).map(function(r){
+                    var boost = Number(r.boost_percent || 0);
+                    var width = Math.max(0, Math.min(100, boost));
+                    return (
+                        '<div class="salary-impact-item">'
+                        + '<div class="impact-skill">' + (r.skill || '—') + '</div>'
+                        + '<div class="impact-bar-container">'
+                        +   '<div class="impact-bar" style="width: ' + width + '%"></div>'
+                        + '</div>'
+                        + '<div class="impact-value positive">+' + boost.toFixed(1) + '%</div>'
+                        + '</div>'
+                    );
+                }).join('');
+            }
+
+            function renderAll(payload){
+                lastPayload = payload || {};
+                var summary = (payload || {}).summary || {};
+                var hasData = hasSalaryData(payload);
+
+                setContentVisibility(hasData);
+                updateSalaryCount(summary);
+
+                if (!hasData) {
+                    return;
+                }
+
+                if (minEl) minEl.textContent = fmtMoney(summary.min_salary);
+                if (avgEl) avgEl.textContent = fmtMoney(summary.avg_salary);
+                if (maxEl) maxEl.textContent = fmtMoney(summary.max_salary);
+                if (medianEl) medianEl.textContent = fmtMoney(summary.median_salary);
+
+                if (countEl) {
+                    var c = summary.total_jobs_with_salary || 0;
+                    countEl.textContent = c ? (c + ' jobs with salary') : '';
+                }
+
+                renderSalaryByExperience(payload.salary_by_experience);
+                renderTopCities(payload.top_cities);
+                renderSkillLift(payload.skills_that_increase_salary);
+            }
+
+            function fetchInsights(role){
+                setLoading(true);
+                var params = new URLSearchParams({ role: role || '' });
+                fetch('{% url "salary_insights_data" %}?' + params.toString(), {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(r){ return r.json(); })
+                .then(function(payload){
+                    renderAll(payload || {});
+                })
+                .catch(function(){
+                    renderAll({summary:{}, salary_by_experience:[], top_cities:[], skills_that_increase_salary:[]});
+                })
+                .finally(function(){
+                    setLoading(false);
+                });
+            }
+
+            // Initial render
+            renderAll(initial || {});
+
+            // Role selector (same pattern as Role Intelligence)
+            if (roleSelect && typeof TomSelect !== 'undefined') {
+                var page = 1;
+                var ts = new TomSelect(roleSelect, {
+                    valueField: 'id',
+                    labelField: 'text',
+                    searchField: ['text'],
+                    create: false,
+                    preload: true,
+                    openOnFocus: true,
+                    maxOptions: null,
+                    shouldSort: false,
+                    loadThrottle: 150,
+                    render: {
+                        option: function(data, escape){
+                            return '<div>' + escape(data.text) + '</div>';
+                        },
+                        item: function(data, escape){
+                            return '<div>' + escape(data.text) + '</div>';
+                        }
+                    },
+                    load: function(query, callback){
+                        var q = (query || '').trim();
+                        var url = new URL('{% url "api_search_roles" %}', window.location.origin);
+                        url.searchParams.set('q', q);
+                        url.searchParams.set('page', '1');
+                        fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(function(r){ return r.json(); })
+                            .then(function(data){
+                                callback((data && data.results) ? data.results : []);
+                            })
+                            .catch(function(){ callback(); });
+                    },
+                    onChange: function(value){
+                        if (!value) return;
+                        fetchInsights(value);
+                    }
+                });
+
+                window.salaryRoleSelectInstance = ts;
+            }
+
+            var themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function(){
+                    setTimeout(function(){
+                        renderAll(lastPayload);
+                    }, 60);
+                });
+            }
+        });
+    </script>
+
+    <style>
+        /* Defensive: prevent ANY full-screen SVG icons */
+        .salary-insights svg {
+            max-width: 80px;
+            max-height: 80px;
+        }
+
+        /* Section gap between sections */
+        .salary-insights .section-gap {
+            height: 32px;
+        }
+
+        /* Summary grid - 4 columns desktop, 2 tablet, 1 mobile */
+        .salary-insights .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .salary-insights .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .salary-insights .summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Summary cards - match Role Intelligence styling */
+        .salary-insights .summary-card {
+            background: #ffffff;
+            border: 1px solid rgba(226, 232, 240, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+            transition: transform 200ms ease, box-shadow 200ms ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .salary-insights .summary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 34px rgba(15, 23, 42, 0.10);
+        }
+
+        .dark .salary-insights .summary-card {
+            background: #111827;
+            border-color: rgba(51, 65, 85, 0.9);
+            box-shadow: 0 16px 34px rgba(0, 0, 0, 0.35);
+        }
+
+        /* Summary head - icon left of title */
+        .salary-insights .summary-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        /* Summary icon styling */
+        .salary-insights .summary-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 12px;
+            background: rgba(37, 99, 235, 0.10);
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .salary-insights .summary-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .dark .salary-insights .summary-icon {
+            background: rgba(37, 99, 235, 0.18);
+            color: #93c5fd;
+        }
+
+        /* Summary label */
+        .salary-insights .summary-label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .dark .salary-insights .summary-label {
+            color: #94a3b8;
+        }
+
+        /* Summary value - large bold number */
+        .salary-insights .summary-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+            margin-top: auto;
+        }
+
+        .dark .salary-insights .summary-value {
+            color: #e5e7eb;
+        }
+
+        /* Chart and content styling */
+        .salary-insights .salary-chart-wrap {
+            height: 260px;
+        }
+
+        .city-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .city-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 12px;
+            align-items: center;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-color);
+        }
+
+        .city-name {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .city-meta {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .city-jobs {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .salary-impact-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .salary-impact-item {
+            display: grid;
+            grid-template-columns: 180px 1fr 90px;
+            gap: 12px;
+            align-items: center;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-color);
+        }
+
+        @media (max-width: 768px) {
+            .salary-impact-item {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+        }
+
+        .impact-skill {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .impact-bar-container {
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(59, 130, 246, 0.12);
+            overflow: hidden;
+        }
+
+        .impact-bar {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        }
+
+        .impact-value {
+            text-align: right;
+            font-weight: 700;
+            color: #2563eb;
+        }
+
+        .dark .impact-value {
+            color: #60a5fa;
+        }
+
+        /* Salary count indicator */
+        .salary-count {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .dark .salary-count {
+            color: #94a3b8;
+        }
+
+        /* Empty state styling */
+        .salary-empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 320px;
+        }
+
+        .empty-state-card {
+            background: #ffffff;
+            border: 1px solid rgba(226, 232, 240, 0.95);
+            border-radius: 16px;
+            padding: 40px 32px;
+            text-align: center;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+            max-width: 420px;
+        }
+
+        .dark .empty-state-card {
+            background: #111827;
+            border-color: rgba(51, 65, 85, 0.9);
+            box-shadow: 0 16px 34px rgba(0, 0, 0, 0.35);
+        }
+
+        .empty-state-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: rgba(239, 68, 68, 0.10);
+            color: #ef4444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .empty-state-icon svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .dark .empty-state-icon {
+            background: rgba(239, 68, 68, 0.18);
+            color: #f87171;
+        }
+
+        .empty-state-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        .dark .empty-state-title {
+            color: #e5e7eb;
+        }
+
+        .empty-state-desc {
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .dark .empty-state-desc {
+            color: #94a3b8;
+        }
+    </style>
+{% endblock %}

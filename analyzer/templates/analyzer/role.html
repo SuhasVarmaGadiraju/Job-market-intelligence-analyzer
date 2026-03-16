@@ -1,0 +1,506 @@
+{% extends 'analyzer/base_app.html' %}
+
+{% block title %}Role Intelligence{% endblock %}
+
+{% block app_title %}Role Intelligence{% endblock %}
+
+{% block content %}
+    <div class="page role-analytics">
+        <div class="analytics-toolbar">
+            <div class="analytics-toolbar-left">
+                <div class="analytics-title">Role Intelligence</div>
+                <div class="analytics-subtitle">Explore skills, experience, demand, and salary signals for a role.</div>
+            </div>
+
+            <div class="analytics-toolbar-right">
+                <label class="select-label" for="roleSelect">Role</label>
+                <select id="roleSelect" class="select" name="role">
+                    {% if selected_role %}
+                        <option value="{{ selected_role }}" selected>{{ selected_role }}</option>
+                    {% endif %}
+                </select>
+            </div>
+        </div>
+
+        <div class="role-loading" data-role-loading aria-hidden="true">
+            <div class="role-loading-card">
+                <div class="role-spinner" aria-hidden="true"></div>
+                <div class="role-loading-text">Updating analytics…</div>
+            </div>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-head">
+                    <div class="summary-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </div>
+                    <div class="summary-label">Total Jobs for Role</div>
+                </div>
+                <div class="summary-value" data-summary-total>{{ initial_data.summary.total_jobs_for_role|default:0 }}</div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-head">
+                    <div class="summary-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 1v22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M17 6H9.5a3.5 3.5 0 000 7H14a3.5 3.5 0 010 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </div>
+                    <div class="summary-label">Average Salary</div>
+                </div>
+                <div class="summary-value" data-summary-avg-salary>{% if initial_data.summary.avg_salary != None %}{{ initial_data.summary.avg_salary|floatformat:0 }}{% else %}—{% endif %}</div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-head">
+                    <div class="summary-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 20V4h16v16H4Z" stroke="currentColor" stroke-width="2"/><path d="M8 16l2-3 3 2 3-5 2 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="summary-label">Top Skill</div>
+                </div>
+                <div class="summary-value" data-summary-top-skill>{{ initial_data.summary.top_skill|default:"—" }}</div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-head">
+                    <div class="summary-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12a5 5 0 100-10 5 5 0 000 10Z" stroke="currentColor" stroke-width="2"/><path d="M20 22a8 8 0 10-16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </div>
+                    <div class="summary-label">Most Common Experience</div>
+                </div>
+                <div class="summary-value" data-summary-exp>{{ initial_data.summary.most_common_experience|default:"—" }}</div>
+            </div>
+        </div>
+
+        <div class="charts-2col">
+            <div class="card chart-surface">
+                <div class="card-title" data-skills-title>Skill Demand</div>
+                <div class="card-desc">Most frequently mentioned skills for the selected role.</div>
+                <div style="height:14px"></div>
+                <div class="chart-wrap"><canvas id="skillsChart" height="220"></canvas></div>
+            </div>
+
+            <div class="card chart-surface">
+                <div class="card-title">Experience Distribution</div>
+                <div class="card-desc">How job postings distribute across experience bands.</div>
+                <div style="height:14px"></div>
+                <div class="chart-wrap"><canvas id="experienceChart" height="140"></canvas></div>
+            </div>
+        </div>
+
+        <div style="height:16px"></div>
+
+        <div class="card chart-surface">
+            <div class="card-title">Role Demand Trend (Top 10 Roles)</div>
+            <div class="card-desc">Overall dataset distribution (independent of selected role).</div>
+            <div style="height:14px"></div>
+            <div class="chart-wrap"><canvas id="trendChart" height="110"></canvas></div>
+        </div>
+
+        <div style="height:16px"></div>
+
+        <div class="salary-grid">
+            <div class="card stat-mini">
+                <div class="card-desc">Min Salary</div>
+                <div class="stat-value" data-salary-min>{% if initial_data.summary.min_salary != None %}{{ initial_data.summary.min_salary|floatformat:0 }}{% else %}—{% endif %}</div>
+            </div>
+            <div class="card stat-mini">
+                <div class="card-desc">Avg Salary</div>
+                <div class="stat-value" data-salary-avg>{% if initial_data.summary.avg_salary != None %}{{ initial_data.summary.avg_salary|floatformat:0 }}{% else %}—{% endif %}</div>
+            </div>
+            <div class="card stat-mini">
+                <div class="card-desc">Max Salary</div>
+                <div class="stat-value" data-salary-max>{% if initial_data.summary.max_salary != None %}{{ initial_data.summary.max_salary|floatformat:0 }}{% else %}—{% endif %}</div>
+            </div>
+        </div>
+
+        <!-- Strategic Career Insights Section -->
+        {% if initial_data.career_intelligence %}
+        <div class="card career-insights-card mt-6">
+            <div class="card-title">Strategic Career Insights</div>
+            <div class="card-desc">Data-driven analysis to guide your career decisions for this role.</div>
+            <div class="mt-5"></div>
+
+            <!-- Demand & Experience Badges -->
+            <div class="insight-badges">
+                <div class="insight-badge demand-{{ initial_data.career_intelligence.demand_indicator.category|slugify }}">
+                    <div class="badge-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="badge-content">
+                        <div class="badge-label">{{ initial_data.career_intelligence.demand_indicator.category }}</div>
+                        <div class="badge-sublabel">Top {{ initial_data.career_intelligence.demand_indicator.percentile|floatformat:0 }}% of roles by demand</div>
+                    </div>
+                </div>
+
+                <div class="insight-badge experience-{{ initial_data.career_intelligence.experience_barrier.classification|slugify }}">
+                    <div class="badge-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </div>
+                    <div class="badge-content">
+                        <div class="badge-label">{{ initial_data.career_intelligence.experience_barrier.classification }}</div>
+                        <div class="badge-sublabel">{{ initial_data.career_intelligence.experience_barrier.senior_pct }}% require 5+ years</div>
+                    </div>
+                </div>
+
+                <div class="insight-badge diversity-{{ initial_data.career_intelligence.skill_diversity.classification|slugify }}">
+                    <div class="badge-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="badge-content">
+                        <div class="badge-label">{{ initial_data.career_intelligence.skill_diversity.classification }}</div>
+                        <div class="badge-sublabel">{{ initial_data.career_intelligence.skill_diversity.avg_skills_per_job }} skills per job</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6"></div>
+
+            <!-- Skill Classification -->
+            <div class="insight-section">
+                <div class="insight-section-title">Skill Importance Classification</div>
+                <div class="skill-classification">
+                    {% if initial_data.career_intelligence.skill_classification.core %}
+                    <div class="skill-category core-skills">
+                        <div class="category-header">
+                            <span class="category-badge core">Core</span>
+                            <span class="category-desc">≥70% of jobs require these</span>
+                        </div>
+                        <div class="skill-tags">
+                            {% for skill in initial_data.career_intelligence.skill_classification.core %}
+                            <span class="skill-tag core" title="{{ skill.importance_score }}% of jobs">{{ skill.name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if initial_data.career_intelligence.skill_classification.important %}
+                    <div class="skill-category important-skills">
+                        <div class="category-header">
+                            <span class="category-badge important">Important</span>
+                            <span class="category-desc">30-70% of jobs require these</span>
+                        </div>
+                        <div class="skill-tags">
+                            {% for skill in initial_data.career_intelligence.skill_classification.important %}
+                            <span class="skill-tag important" title="{{ skill.importance_score }}% of jobs">{{ skill.name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if initial_data.career_intelligence.skill_classification.optional %}
+                    <div class="skill-category optional-skills">
+                        <div class="category-header">
+                            <span class="category-badge optional">Optional</span>
+                            <span class="category-desc"><30% of jobs require these</span>
+                        </div>
+                        <div class="skill-tags">
+                            {% for skill in initial_data.career_intelligence.skill_classification.optional %}
+                            <span class="skill-tag optional" title="{{ skill.importance_score }}% of jobs">{{ skill.name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mt-6"></div>
+
+            <!-- Salary Impact by Skill -->
+            {% if initial_data.career_intelligence.salary_impact %}
+            <div class="insight-section">
+                <div class="insight-section-title">Skills That Increase Salary</div>
+                <div class="salary-impact-list">
+                    {% for item in initial_data.career_intelligence.salary_impact|slice:":5" %}
+                    <div class="salary-impact-item">
+                        <div class="impact-skill">{{ item.skill }}</div>
+                        <div class="impact-bar-container">
+                            <div class="impact-bar" style="width: {{ item.salary_impact }}%"></div>
+                        </div>
+                        <div class="impact-value {% if item.salary_impact > 0 %}positive{% else %}negative{% endif %}">
+                            {% if item.salary_impact > 0 %}+{% endif %}{{ item.salary_impact }}%
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="mt-6"></div>
+
+            <!-- Recommendations Panel -->
+            <div class="insight-section">
+                <div class="insight-section-title">Career Insights</div>
+                <div class="recommendations-list">
+                    {% for rec in initial_data.career_intelligence.recommendations %}
+                    <div class="recommendation-item">
+                        <div class="rec-icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M17.636 17.636l-.707-.707M12 21v-1M6.343 17.636l.707-.707M3 12h1m1.636-6.364l.707.707" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        </div>
+                        <div class="rec-text">{{ rec }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {{ initial_data|json_script:"roleChartData" }}
+
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+        <script>
+            (function(){
+                var select = document.getElementById('roleSelect');
+
+                var loading = document.querySelector('[data-role-loading]');
+                var skillsTitle = document.querySelector('[data-skills-title]');
+                var raw = document.getElementById('roleChartData');
+
+                var data = {};
+                try{ data = JSON.parse(raw.textContent || '{}'); }catch(e){ data = {}; }
+
+                function setLoading(on){
+                    if(!loading) return;
+                    loading.classList.toggle('is-open', !!on);
+                    loading.setAttribute('aria-hidden', on ? 'false' : 'true');
+                }
+
+                function axisColor(){
+                    return document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,0.65)' : 'rgba(71,85,105,0.75)';
+                }
+
+                function gridColor(){
+                    return document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,0.16)' : 'rgba(15,23,42,0.08)';
+                }
+
+                var skillsCtx = document.getElementById('skillsChart');
+                var expCtx = document.getElementById('experienceChart');
+                var trendCtx = document.getElementById('trendChart');
+
+                function fmtNumber(n){
+                    if(n === null || n === undefined) return '—';
+                    if(typeof n === 'number' && !isFinite(n)) return '—';
+                    var x = (typeof n === 'number') ? n : parseFloat(n);
+                    if(!isFinite(x)) return '—';
+                    return Math.round(x).toString();
+                }
+
+                function updateSkillsTitle(topN){
+                    var n = parseInt(topN || 0, 10);
+                    if(!skillsTitle) return;
+                    if(!n) skillsTitle.textContent = 'Skill Demand';
+                    else skillsTitle.textContent = 'Skill Demand (Top ' + n + ')';
+                }
+
+                function safeLabels(obj){
+                    return (obj && obj.labels && obj.labels.length) ? obj.labels : ['No data'];
+                }
+
+                function safeValues(obj, fallback){
+                    return (obj && obj.values && obj.values.length) ? obj.values : fallback;
+                }
+
+                function setSummary(payload){
+                    var s = (payload && payload.summary) ? payload.summary : {};
+
+                    var elTotal = document.querySelector('[data-summary-total]');
+                    var elAvg = document.querySelector('[data-summary-avg-salary]');
+                    var elTopSkill = document.querySelector('[data-summary-top-skill]');
+                    var elExp = document.querySelector('[data-summary-exp]');
+                    var elMin = document.querySelector('[data-salary-min]');
+                    var elAvg2 = document.querySelector('[data-salary-avg]');
+                    var elMax = document.querySelector('[data-salary-max]');
+
+                    if(elTotal) elTotal.textContent = (s.total_jobs_for_role !== undefined && s.total_jobs_for_role !== null) ? s.total_jobs_for_role : 0;
+                    if(elAvg) elAvg.textContent = fmtNumber(s.avg_salary);
+                    if(elTopSkill) elTopSkill.textContent = s.top_skill || '—';
+                    if(elExp) elExp.textContent = s.most_common_experience || '—';
+                    if(elMin) elMin.textContent = fmtNumber(s.min_salary);
+                    if(elAvg2) elAvg2.textContent = fmtNumber(s.avg_salary);
+                    if(elMax) elMax.textContent = fmtNumber(s.max_salary);
+                }
+
+                function destroyChart(ref){
+                    if(ref && typeof ref.destroy === 'function') ref.destroy();
+                }
+
+                function renderCharts(payload){
+                    updateSkillsTitle(payload.skills_top_n);
+
+                    var skillsLabels = safeLabels(payload.skills);
+                    var skillsValues = safeValues(payload.skills, [0]);
+                    var expLabels = safeLabels(payload.experience);
+                    var expValues = safeValues(payload.experience, [1]);
+                    var trendLabels = safeLabels(payload.trend);
+                    var trendValues = safeValues(payload.trend, [0]);
+
+                    destroyChart(window.skillsChart);
+                    destroyChart(window.experienceChart);
+                    destroyChart(window.trendChart);
+
+                    window.skillsChart = new Chart(skillsCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: skillsLabels,
+                            datasets: [{
+                                label: 'Frequency',
+                                data: skillsValues,
+                                backgroundColor: 'rgba(37, 99, 235, 0.75)',
+                                borderColor: 'rgba(37, 99, 235, 1)',
+                                borderWidth: 1,
+                                borderRadius: 8,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                            layout: {
+                                padding: {
+                                    bottom: 30
+                                }
+                            },
+                            scales: {
+                                x: { 
+                                    ticks: { 
+                                        color: axisColor(), 
+                                        maxRotation: 45, 
+                                        minRotation: 45,
+                                        autoSkip: false,
+                                        font: {
+                                            size: 11
+                                        }
+                                    }, 
+                                    grid: { display: false } 
+                                },
+                                y: { ticks: { color: axisColor(), precision: 0 }, grid: { color: gridColor() }, beginAtZero: true }
+                            }
+                        }
+                    });
+
+                    window.experienceChart = new Chart(expCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: expLabels,
+                            datasets: [{
+                                data: expValues,
+                                backgroundColor: [
+                                    'rgba(37, 99, 235, 0.75)',
+                                    'rgba(59, 130, 246, 0.65)',
+                                    'rgba(96, 165, 250, 0.55)',
+                                    'rgba(148, 163, 184, 0.35)'
+                                ],
+                                borderColor: document.documentElement.classList.contains('dark') ? '#0b1220' : '#ffffff',
+                                borderWidth: 2,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'bottom', labels: { color: axisColor() } },
+                                tooltip: { enabled: true }
+                            }
+                        }
+                    });
+
+                    window.trendChart = new Chart(trendCtx, {
+                        type: 'line',
+                        data: {
+                            labels: trendLabels,
+                            datasets: [{
+                                label: 'Job count',
+                                data: trendValues,
+                                borderColor: 'rgba(37, 99, 235, 1)',
+                                backgroundColor: 'rgba(37, 99, 235, 0.18)',
+                                fill: true,
+                                tension: 0.35,
+                                pointRadius: 3,
+                                pointHoverRadius: 5,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                            scales: {
+                                x: { ticks: { color: axisColor() }, grid: { display: false } },
+                                y: { ticks: { color: axisColor(), precision: 0 }, grid: { color: gridColor() }, beginAtZero: true }
+                            }
+                        }
+                    });
+                }
+
+                setSummary(data);
+                renderCharts(data);
+
+                function updateChartTheme(){
+                    var dark = document.documentElement.classList.contains('dark');
+                    var a = axisColor();
+                    var g = gridColor();
+
+                    if(window.skillsChart){
+                        window.skillsChart.options.scales.x.ticks.color = a;
+                        window.skillsChart.options.scales.y.ticks.color = a;
+                        window.skillsChart.options.scales.y.grid.color = g;
+                        window.skillsChart.update();
+                    }
+
+                    if(window.experienceChart){
+                        window.experienceChart.options.plugins.legend.labels.color = a;
+                        window.experienceChart.data.datasets[0].borderColor = dark ? '#0b1220' : '#ffffff';
+                        window.experienceChart.update();
+                    }
+
+                    if(window.trendChart){
+                        window.trendChart.options.scales.x.ticks.color = a;
+                        window.trendChart.options.scales.y.ticks.color = a;
+                        window.trendChart.options.scales.y.grid.color = g;
+                        window.trendChart.update();
+                    }
+                }
+
+                var themeToggle = document.querySelector('[data-theme-toggle]');
+                if(themeToggle){
+                    themeToggle.addEventListener('click', function(){
+                        window.setTimeout(updateChartTheme, 10);
+                    });
+                }
+
+                if(select && window.jQuery && window.jQuery.fn && window.jQuery.fn.select2){
+                    window.jQuery(select).select2({
+                        width: 'style',
+                        minimumInputLength: 0,
+                        placeholder: 'Search roles…',
+                        allowClear: false,
+                        ajax: {
+                            url: '{% url "api_search_roles" %}',
+                            dataType: 'json',
+                            delay: 200,
+                            data: function(params){
+                                return { q: params.term || '', page: params.page || 1 };
+                            },
+                            processResults: function(data){
+                                return {
+                                    results: (data && data.results) ? data.results : [],
+                                    pagination: (data && data.pagination) ? data.pagination : {more:false}
+                                };
+                            },
+                            cache: true
+                        }
+                    });
+
+                    window.jQuery(select).on('select2:select', function(e){
+                        var role = (e && e.params && e.params.data) ? e.params.data.id : (select ? select.value : '');
+                        if(!role) return;
+                        var u = new URL(window.location.origin + '{% url "role" %}');
+                        u.searchParams.set('role', role);
+                        window.location.href = u.toString();
+                    });
+                }
+            })();
+        </script>
+    </div>
+{% endblock %}
