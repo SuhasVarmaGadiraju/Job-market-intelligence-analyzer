@@ -75,6 +75,5 @@ RUN DATABASE_URL=sqlite:///:memory: \
     DEBUG=False \
     python manage.py collectstatic --noinput
 
-# Run the app dynamically binding to $PORT (set by Render/environment, default 8000)
-# Standard production server is Gunicorn with 3 workers
-CMD ["sh", "-c", "gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3"]
+# Run migrations and start the app dynamically binding to $PORT
+CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3"]
