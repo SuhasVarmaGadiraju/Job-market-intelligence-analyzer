@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+.github
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large spreadsheet/datasets (imported to SQLite locally, no need for production image)
+*.xlsx
+*.csv
+
+# Local configuration & secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# SQLite local database
+# To keep your production image lightweight, uncomment the line below to ignore the SQLite db.
+# If you are using PostgreSQL in production (e.g. on Render), uncommenting this is recommended.
+# db.sqlite3
+# db.sqlite3-journal
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
