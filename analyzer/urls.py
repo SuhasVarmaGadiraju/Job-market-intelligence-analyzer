@@ -18,7 +18,9 @@ urlpatterns = [
     path('skill-gap/analyze/', views.skill_gap_analyze, name='skill_gap_analyze'),
     path('salary/', views.salary, name='salary'),
     path('salary/insights-data/', views.salary_insights_data, name='salary_insights_data'),
+    path('dashboard/data/', views.dashboard_data, name='dashboard_data'),
     path('trend-tracking/', views.trend_tracking, name='trend_tracking'),
+    path('trend-tracking/data/', views.trend_tracking_data, name='trend_tracking_data'),
     path('profile/', views.profile, name='profile'),
     path('settings/', views.settings, name='settings'),
 

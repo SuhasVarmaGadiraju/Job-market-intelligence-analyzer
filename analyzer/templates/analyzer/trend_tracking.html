@@ -4,69 +4,344 @@
 
 {% block app_title %}Trend Tracking{% endblock %}
 
+{% block extra_head %}
+<style>
+    .skeleton {
+        background: linear-gradient(90deg, rgba(148,163,184,0.13) 25%, rgba(148,163,184,0.25) 50%, rgba(148,163,184,0.13) 75%);
+        background-size: 200% 100%;
+        animation: loading-skeleton 1.5s infinite;
+        border-radius: 4px;
+        color: transparent !important;
+    }
+    html.dark .skeleton {
+        background: linear-gradient(90deg, rgba(51,65,85,0.2) 25%, rgba(51,65,85,0.4) 50%, rgba(51,65,85,0.2) 75%);
+        background-size: 200% 100%;
+    }
+    @keyframes loading-skeleton {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    .chart-surface {
+        padding: 20px;
+        border-radius: 14px;
+        min-height: 320px;
+    }
+    .filters-row {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        background: #ffffff;
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(15,23,42,0.03);
+    }
+    html.dark .filters-row {
+        background: #1e293b;
+        box-shadow: none;
+    }
+    .filter-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .filter-item select {
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(203,213,225,0.8);
+        background: transparent;
+        color: inherit;
+        outline: none;
+        font-weight: 500;
+        min-width: 200px;
+    }
+    html.dark .filter-item select {
+        border-color: rgba(51,65,85,0.8);
+        background: #0f172a;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
     <div class="page">
-        <div class="card">
-            <div class="card-title">Trend Tracking</div>
-            <div class="card-desc">Monitor skill demand and technology trends over time.</div>
+        <!-- Top Toolbar with dynamic filters -->
+        <div class="filters-row">
+            <div class="filter-item">
+                <label for="filter-role" style="font-size:12px; font-weight:600; color:rgba(148,163,184,0.95);">Select Career Role</label>
+                <select id="filter-role" name="role">
+                    {% for r in role_options %}
+                        <option value="{{ r }}">{{ r }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            <div style="height:14px"></div>
+            <div class="filter-item">
+                <label for="filter-range" style="font-size:12px; font-weight:600; color:rgba(148,163,184,0.95);">Time Frame</label>
+                <select id="filter-range" name="range">
+                    <option value="3m">3 Months</option>
+                    <option value="6m">6 Months</option>
+                    <option value="1y" selected>1 Year</option>
+                </select>
+            </div>
+        </div>
 
-            <div class="filters">
-                <div class="filter">
-                    <label class="filter-label" for="filter-role">Select Role</label>
-                    <select class="filter-select" id="filter-role" name="role">
-                        <option value="">All roles</option>
-                        <option value="data_analyst">Data Analyst</option>
-                        <option value="data_scientist">Data Scientist</option>
-                        <option value="software_engineer">Software Engineer</option>
-                    </select>
+        <div style="height:20px"></div>
+
+        <!-- 4 Trend Analytics Cards -->
+        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;">
+            <div class="stat-card">
+                <small>Fastest Growing Skill</small>
+                <div class="stat-number skeleton" id="card-fastest-growing">—</div>
+            </div>
+            <div class="stat-card">
+                <small>Most Stable Core Skill</small>
+                <div class="stat-number skeleton" id="card-most-stable">—</div>
+            </div>
+            <div class="stat-card">
+                <small>Highest Salary Growth Skill</small>
+                <div class="stat-number skeleton" id="card-highest-salary">—</div>
+            </div>
+            <div class="stat-card">
+                <small>Most Declining Technology</small>
+                <div class="stat-number skeleton" id="card-most-declining">—</div>
+            </div>
+        </div>
+
+        <div style="height:20px"></div>
+
+        <!-- 4 Trend Charts Grid -->
+        <div class="charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); gap: 24px;">
+            <!-- Chart 1: Monthly Skill Demand Trend -->
+            <div class="card chart-surface">
+                <h2>Monthly Skill Demand Trend</h2>
+                <p>Demand percentages for top hiring skills over time.</p>
+                <div style="height:14px"></div>
+                <div class="chart-wrap" style="height: 250px; position: relative;">
+                    <canvas id="skillTrendChart"></canvas>
                 </div>
+            </div>
 
-                <div class="filter">
-                    <label class="filter-label" for="filter-range">Select Time Range</label>
-                    <select class="filter-select" id="filter-range" name="range">
-                        <option value="3m">3 months</option>
-                        <option value="6m">6 months</option>
-                        <option value="1y" selected>1 year</option>
-                    </select>
+            <!-- Chart 2: Technology Growth Trend -->
+            <div class="card chart-surface">
+                <h2>Technology Growth Trend</h2>
+                <p>Growth progression for structural domains (Cloud, AI/ML, DevOps).</p>
+                <div style="height:14px"></div>
+                <div class="chart-wrap" style="height: 250px; position: relative;">
+                    <canvas id="techGrowthChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 3: Skill Popularity Heatmap -->
+            <div class="card chart-surface">
+                <h2>Skill Popularity Spectrum</h2>
+                <p>Overall frequency share comparison between key skills.</p>
+                <div style="height:14px"></div>
+                <div class="chart-wrap" style="height: 250px; position: relative;">
+                    <canvas id="popularityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 4: Role Growth Comparison -->
+            <div class="card chart-surface">
+                <h2>Role Growth Comparison</h2>
+                <p>Hiring rate of selected role against the general baseline.</p>
+                <div style="height:14px"></div>
+                <div class="chart-wrap" style="height: 250px; position: relative;">
+                    <canvas id="roleComparisonChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <div style="height:16px"></div>
+        <div style="height:24px"></div>
 
-        <div class="card">
-            <div class="card-title">Monthly Skill Demand Trend</div>
-            <div class="card-desc">(Placeholder) Line chart container ready for Chart.js.</div>
-            <div style="height:14px"></div>
+        <!-- Lists for Rising and Declining Skills -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div class="card list-card">
+                <div class="list-title" style="font-weight:600; margin-bottom: 12px;">Rising Market Skills</div>
+                <div class="pill-list" id="rising-skills-list" style="display:flex; flex-wrap:wrap; gap:10px;">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
 
-            <div class="trend-grid">
-                <div class="chart-box" id="chart-skill-trend"></div>
-                <div>
-                    <div class="card list-card" style="margin-bottom:14px">
-                        <div class="list-title">Rising Skills</div>
-                        <div class="pill-list">
-                            <div class="pill">Python <small>+18%</small></div>
-                            <div class="pill">SQL <small>+14%</small></div>
-                            <div class="pill">Power BI <small>+12%</small></div>
-                            <div class="pill">AWS <small>+10%</small></div>
-                            <div class="pill">Docker <small>+9%</small></div>
-                        </div>
-                    </div>
-
-                    <div class="card list-card">
-                        <div class="list-title">Declining Skills</div>
-                        <div class="pill-list">
-                            <div class="pill">jQuery <small>-8%</small></div>
-                            <div class="pill">PHP <small>-7%</small></div>
-                            <div class="pill">Perl <small>-6%</small></div>
-                            <div class="pill">Flash <small>-6%</small></div>
-                            <div class="pill">VB.NET <small>-5%</small></div>
-                        </div>
-                    </div>
+            <div class="card list-card">
+                <div class="list-title" style="font-weight:600; margin-bottom: 12px;">Declining Tech Skills</div>
+                <div class="pill-list" id="declining-skills-list" style="display:flex; flex-wrap:wrap; gap:10px;">
+                    <!-- Dynamically populated -->
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- ChartJS inclusion -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        (function(){
+            document.addEventListener("DOMContentLoaded", function() {
+                var filterRole = document.getElementById('filter-role');
+                var filterRange = document.getElementById('filter-range');
+
+                var cards = {
+                    fastest: document.getElementById('card-fastest-growing'),
+                    stable: document.getElementById('card-most-stable'),
+                    salary: document.getElementById('card-highest-salary'),
+                    declining: document.getElementById('card-most-declining')
+                };
+
+                var chartInstances = {};
+
+                function axisColor(){
+                    return document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,0.65)' : 'rgba(71,85,105,0.75)';
+                }
+
+                function gridColor(){
+                    return document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,0.16)' : 'rgba(15,23,42,0.08)';
+                }
+
+                function destroyCharts(){
+                    Object.values(chartInstances).forEach(chart => {
+                        if(chart && typeof chart.destroy === 'function') chart.destroy();
+                    });
+                    chartInstances = {};
+                }
+
+                function fetchTrendAnalytics(){
+                    // Add skeleton loaders
+                    Object.values(cards).forEach(el => el.classList.add('skeleton'));
+
+                    var role = filterRole.value;
+                    var range = filterRange.value;
+
+                    var url = new URL(window.location.origin + "{% url 'trend_tracking_data' %}");
+                    url.searchParams.set("role", role);
+                    url.searchParams.set("range", range);
+
+                    fetch(url.toString())
+                        .then(res => res.json())
+                        .then(data => {
+                            // 1. Populate Cards
+                            cards.fastest.innerHTML = `${data.cards.fastest_growing.name} <small style="display:block; font-size:14px; font-weight:normal; color:#10b981;">${data.cards.fastest_growing.val}</small>`;
+                            cards.stable.innerHTML = `${data.cards.most_stable.name} <small style="display:block; font-size:14px; font-weight:normal; color:#3b82f6;">${data.cards.most_stable.val}</small>`;
+                            cards.salary.innerHTML = `${data.cards.highest_salary.name} <small style="display:block; font-size:14px; font-weight:normal; color:#f59f0b;">${data.cards.highest_salary.val}</small>`;
+                            cards.declining.innerHTML = `${data.cards.most_declining.name} <small style="display:block; font-size:14px; font-weight:normal; color:#ef4444;">${data.cards.most_declining.val}</small>`;
+
+                            Object.values(cards).forEach(el => el.classList.remove('skeleton'));
+
+                            // 2. Populate lists
+                            var risingContainer = document.getElementById('rising-skills-list');
+                            var decliningContainer = document.getElementById('declining-skills-list');
+                            risingContainer.innerHTML = '';
+                            decliningContainer.innerHTML = '';
+
+                            data.rising.forEach(item => {
+                                risingContainer.innerHTML += `<div class="pill" style="padding:6px 12px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); border-radius:20px; font-size:13px; font-weight:500; color:#10b981;">${item.skill} <small style="font-weight:600; margin-left:4px;">${item.change}</small></div>`;
+                            });
+
+                            data.declining.forEach(item => {
+                                decliningContainer.innerHTML += `<div class="pill" style="padding:6px 12px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); border-radius:20px; font-size:13px; font-weight:500; color:#ef4444;">${item.skill} <small style="font-weight:600; margin-left:4px;">${item.change}</small></div>`;
+                            });
+
+                            // 3. Render Charts
+                            destroyCharts();
+
+                            // Chart 1: Skill Trend Line
+                            chartInstances.skillTrend = new Chart(document.getElementById('skillTrendChart'), {
+                                type: 'line',
+                                data: {
+                                    labels: data.charts.skill_trend.labels,
+                                    datasets: data.charts.skill_trend.datasets
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { position: 'bottom', labels: { color: axisColor(), boxWidth: 12 } } },
+                                    scales: {
+                                        x: { ticks: { color: axisColor() }, grid: { display: false } },
+                                        y: { ticks: { color: axisColor() }, grid: { color: gridColor() } }
+                                    }
+                                }
+                            });
+
+                            // Chart 2: Tech Growth lines
+                            chartInstances.techGrowth = new Chart(document.getElementById('techGrowthChart'), {
+                                type: 'line',
+                                data: {
+                                    labels: data.charts.tech_growth.labels,
+                                    datasets: data.charts.tech_growth.datasets
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { position: 'bottom', labels: { color: axisColor(), boxWidth: 12 } } },
+                                    scales: {
+                                        x: { ticks: { color: axisColor() }, grid: { display: false } },
+                                        y: { ticks: { color: axisColor() }, grid: { color: gridColor() } }
+                                    }
+                                }
+                            });
+
+                            // Chart 3: Popularity Spectrum (Bar Chart)
+                            chartInstances.popularity = new Chart(document.getElementById('popularityChart'), {
+                                type: 'bar',
+                                data: {
+                                    labels: data.charts.heatmap.labels,
+                                    datasets: [{
+                                        data: data.charts.heatmap.values,
+                                        backgroundColor: [
+                                            'rgba(37, 99, 235, 0.75)',
+                                            'rgba(59, 130, 246, 0.75)',
+                                            'rgba(16, 185, 129, 0.75)',
+                                            'rgba(245, 158, 11, 0.75)',
+                                            'rgba(139, 92, 246, 0.75)',
+                                            'rgba(239, 68, 68, 0.75)'
+                                        ],
+                                        borderRadius: 6
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { display: false } },
+                                    scales: {
+                                        x: { ticks: { color: axisColor(), font: { size: 10 } }, grid: { display: false } },
+                                        y: { ticks: { color: axisColor() }, grid: { color: gridColor() } }
+                                    }
+                                }
+                            });
+
+                            // Chart 4: Role Growth Comparison (Line)
+                            chartInstances.roleComparison = new Chart(document.getElementById('roleComparisonChart'), {
+                                type: 'line',
+                                data: {
+                                    labels: data.charts.role_comparison.labels,
+                                    datasets: data.charts.role_comparison.datasets
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { position: 'bottom', labels: { color: axisColor() } } },
+                                    scales: {
+                                        x: { ticks: { color: axisColor() }, grid: { display: false } },
+                                        y: { ticks: { color: axisColor() }, grid: { color: gridColor() } }
+                                    }
+                                }
+                            });
+                        })
+                        .catch(err => {
+                            console.error("Error fetching trend data:", err);
+                            Object.values(cards).forEach(el => {
+                                el.textContent = "Error";
+                                el.classList.remove('skeleton');
+                            });
+                        });
+                }
+
+                // Initial fetch
+                fetchTrendAnalytics();
+
+                // On filter change
+                filterRole.addEventListener('change', fetchTrendAnalytics);
+                filterRange.addEventListener('change', fetchTrendAnalytics);
+            });
+        })();
+    </script>
 {% endblock %}
+

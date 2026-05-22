@@ -5,8 +5,6 @@ class AnalyzerConfig(AppConfig):
     name = 'analyzer'
 
     def ready(self):
-        from analyzer.services.skill_gap_precompute import warm_role_skill_index
-        from analyzer.services.salary_insights_precompute import warm_salary_insights_index
-
-        warm_role_skill_index()
-        warm_salary_insights_index()
+        # We now use Live API + On-demand Caching.
+        # Pre-computation at startup is disabled for optimal performance.
+        pass

@@ -10,22 +10,27 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-o=uhq)wb7&wy!++dl4+o32bf&rc462p_fq0rtvnm6wy2knnxol'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-o=uhq)wb7&wy!++dl4+o32bf&rc462p_fq0rtvnm6wy2knnxol')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -79,6 +84,35 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# Redis Caching with LocMem fallback
+REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1')
+try:
+    import redis
+    from urllib.parse import urlparse
+    url = urlparse(REDIS_URL)
+    r = redis.Redis(host=url.hostname or '127.0.0.1', port=url.port or 6379, socket_connect_timeout=0.5)
+    r.ping()
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "CONNECTION_POOL_KWARGS": {"max_connections": 50, "timeout": 1}
+            }
+        }
+    }
+except Exception:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake-job-market-analyzer",
+        }
+    }
+
+# JSearch API Key
+RAPIDAPI_KEY = os.getenv('RAPIDAPI_KEY', 'your_key_here')
 
 
 # Password validation

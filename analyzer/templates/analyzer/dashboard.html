@@ -4,38 +4,106 @@
 
 {% block app_title %}Dashboard{% endblock %}
 
+{% block extra_head %}
+<style>
+    .skeleton {
+        background: linear-gradient(90deg, rgba(148,163,184,0.13) 25%, rgba(148,163,184,0.25) 50%, rgba(148,163,184,0.13) 75%);
+        background-size: 200% 100%;
+        animation: loading-skeleton 1.5s infinite;
+        border-radius: 4px;
+        color: transparent !important;
+    }
+    html.dark .skeleton {
+        background: linear-gradient(90deg, rgba(51,65,85,0.2) 25%, rgba(51,65,85,0.4) 50%, rgba(51,65,85,0.2) 75%);
+        background-size: 200% 100%;
+    }
+    @keyframes loading-skeleton {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    .chart-surface {
+        padding: 20px;
+        border-radius: 14px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
     <div class="page gated-wrap">
         <div class="gated-content {% if not user.is_authenticated %}is-blurred is-disabled{% endif %}">
             <div class="page-header">
-                <p>Here’s a quick snapshot of your job market dataset.</p>
+                <p>Here’s a quick snapshot of the live tech job market analytics and active skill demands.</p>
             </div>
 
-            <div class="stats-grid">
+            <!-- 8 Stats Cards Grid -->
+            <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;">
                 <div class="stat-card">
-                    <small>Total Jobs</small>
-                    <div class="stat-number">{{ total_jobs }}</div>
+                    <small>Total Jobs Analyzed</small>
+                    <div class="stat-number skeleton" id="stat-total-jobs">0</div>
                 </div>
                 <div class="stat-card">
-                    <small>Total Roles</small>
-                    <div class="stat-number">{{ total_roles }}</div>
+                    <small>Active Tech Roles</small>
+                    <div class="stat-number skeleton" id="stat-total-roles">0</div>
                 </div>
                 <div class="stat-card">
-                    <small>Total Skills</small>
-                    <div class="stat-number">—</div>
+                    <small>Average Annual Salary</small>
+                    <div class="stat-number skeleton" id="stat-avg-salary">—</div>
                 </div>
                 <div class="stat-card">
-                    <small>Average Salary</small>
-                    <div class="stat-number">—</div>
+                    <small>Top Trending Skill</small>
+                    <div class="stat-number skeleton" style="font-size: 24px;" id="stat-top-skill">—</div>
+                </div>
+                <div class="stat-card">
+                    <small>Top Hiring Role</small>
+                    <div class="stat-number skeleton" style="font-size: 24px;" id="stat-top-role">—</div>
+                </div>
+                <div class="stat-card">
+                    <small>Most In-Demand Tech</small>
+                    <div class="stat-number skeleton" style="font-size: 24px;" id="stat-in-demand-tech">—</div>
+                </div>
+                <div class="stat-card">
+                    <small>Remote Job Ratio</small>
+                    <div class="stat-number skeleton" id="stat-remote-pct">—</div>
+                </div>
+                <div class="stat-card">
+                    <small>Entry-Level Positions</small>
+                    <div class="stat-number skeleton" id="stat-entry-count">—</div>
                 </div>
             </div>
 
-            <div class="chart-card">
-                <h2>Charts</h2>
-                <p>(Placeholder) Chart containers ready for Chart.js.</p>
-                <div class="charts-grid">
-                    <div class="chart-box" id="chart-overview"></div>
-                    <div class="chart-box" id="chart-roles"></div>
+            <!-- 4 Chart.js Grid -->
+            <div class="charts-grid" style="grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 24px; margin-top: 24px;">
+                <div class="card chart-surface">
+                    <h2>Jobs by Role</h2>
+                    <p>Total job postings split across key sectors.</p>
+                    <div style="height:14px"></div>
+                    <div class="chart-wrap" style="height: 240px; position: relative;">
+                        <canvas id="jobsByRoleChart"></canvas>
+                    </div>
+                </div>
+                <div class="card chart-surface">
+                    <h2>Salary Distribution</h2>
+                    <p>Average salary progression based on experience bands.</p>
+                    <div style="height:14px"></div>
+                    <div class="chart-wrap" style="height: 240px; position: relative;">
+                        <canvas id="salaryDistChart"></canvas>
+                    </div>
+                </div>
+                <div class="card chart-surface">
+                    <h2>Skill Demand Distribution</h2>
+                    <p>Share of job postings requiring top skills.</p>
+                    <div style="height:14px"></div>
+                    <div class="chart-wrap" style="height: 240px; position: relative;">
+                        <canvas id="skillDemandChart"></canvas>
+                    </div>
+                </div>
+                <div class="card chart-surface">
+                    <h2>Experience Level Split</h2>
+                    <p>Job market entry requirements breakdown.</p>
+                    <div style="height:14px"></div>
+                    <div class="chart-wrap" style="height: 240px; position: relative;">
+                        <canvas id="expDistChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -49,7 +117,7 @@
                     <form method="POST" action="{% url 'login' %}" class="modal-form">
                         {% csrf_token %}
                         <div class="modal-field">
-                            <input type="text" name="username" class="modal-input" placeholder="Email" required>
+                            <input type="text" name="username" class="modal-input" placeholder="Username" required>
                         </div>
                         <div class="modal-field">
                             <input type="password" name="password" class="modal-input" placeholder="Password" required>
@@ -65,4 +133,155 @@
             </div>
         {% endif %}
     </div>
-{% endblock %}
+
+    <!-- ChartJS inclusion -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        (function(){
+            {% if user.is_authenticated %}
+            document.addEventListener("DOMContentLoaded", function() {
+                var stats = {
+                    totalJobs: document.getElementById('stat-total-jobs'),
+                    totalRoles: document.getElementById('stat-total-roles'),
+                    avgSalary: document.getElementById('stat-avg-salary'),
+                    topSkill: document.getElementById('stat-top-skill'),
+                    topRole: document.getElementById('stat-top-role'),
+                    inDemandTech: document.getElementById('stat-in-demand-tech'),
+                    remotePct: document.getElementById('stat-remote-pct'),
+                    entryCount: document.getElementById('stat-entry-count')
+                };
+
+                function axisColor(){
+                    return document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,0.65)' : 'rgba(71,85,105,0.75)';
+                }
+
+                function gridColor(){
+                    return document.documentElement.classList.contains('dark') ? 'rgba(148,163,184,0.16)' : 'rgba(15,23,42,0.08)';
+                }
+
+                // Fetch real dashboard stats and charts data
+                fetch("{% url 'dashboard_data' %}")
+                    .then(response => response.json())
+                    .then(data => {
+                        // 1. Populate stats cards
+                        stats.totalJobs.textContent = data.metrics.total_jobs;
+                        stats.totalRoles.textContent = data.metrics.total_roles;
+                        stats.avgSalary.textContent = data.metrics.avg_salary;
+                        stats.topSkill.textContent = data.metrics.top_skill;
+                        stats.topRole.textContent = data.metrics.top_role;
+                        stats.inDemandTech.textContent = data.metrics.in_demand_tech;
+                        stats.remotePct.textContent = data.metrics.remote_pct;
+                        stats.entryCount.textContent = data.metrics.entry_level_count;
+
+                        // Remove skeleton loaders
+                        Object.values(stats).forEach(el => el.classList.remove('skeleton'));
+
+                        // 2. Render Charts
+                        // Chart A: Jobs by Role (Bar)
+                        new Chart(document.getElementById('jobsByRoleChart'), {
+                            type: 'bar',
+                            data: {
+                                labels: data.charts.jobs_by_role.labels,
+                                datasets: [{
+                                    data: data.charts.jobs_by_role.values,
+                                    backgroundColor: 'rgba(37, 99, 235, 0.75)',
+                                    borderColor: 'rgba(37, 99, 235, 1)',
+                                    borderWidth: 1,
+                                    borderRadius: 6
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { ticks: { color: axisColor(), font: { size: 10 } }, grid: { display: false } },
+                                    y: { ticks: { color: axisColor() }, grid: { color: gridColor() } }
+                                }
+                            }
+                        });
+
+                        // Chart B: Salary Distribution (Line)
+                        new Chart(document.getElementById('salaryDistChart'), {
+                            type: 'line',
+                            data: {
+                                labels: data.charts.salary_dist.labels,
+                                datasets: [{
+                                    label: 'Salary (INR)',
+                                    data: data.charts.salary_dist.values,
+                                    borderColor: '#10b981',
+                                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                    fill: true,
+                                    tension: 0.3,
+                                    pointRadius: 4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { ticks: { color: axisColor() }, grid: { display: false } },
+                                    y: { ticks: { color: axisColor() }, grid: { color: gridColor() } }
+                                }
+                            }
+                        });
+
+                        // Chart C: Skill Demand Distribution (Pie)
+                        new Chart(document.getElementById('skillDemandChart'), {
+                            type: 'pie',
+                            data: {
+                                labels: data.charts.skill_demand.labels,
+                                datasets: [{
+                                    data: data.charts.skill_demand.values,
+                                    backgroundColor: [
+                                        'rgba(37, 99, 235, 0.8)',
+                                        'rgba(16, 185, 129, 0.8)',
+                                        'rgba(245, 158, 11, 0.8)',
+                                        'rgba(139, 92, 246, 0.8)',
+                                        'rgba(239, 68, 68, 0.8)'
+                                    ],
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { position: 'right', labels: { color: axisColor(), font: { size: 10 } } } }
+                            }
+                        });
+
+                        // Chart D: Experience Level Split (Doughnut)
+                        new Chart(document.getElementById('expDistChart'), {
+                            type: 'doughnut',
+                            data: {
+                                labels: data.charts.exp_dist.labels,
+                                datasets: [{
+                                    data: data.charts.exp_dist.values,
+                                    backgroundColor: [
+                                        'rgba(59, 130, 246, 0.8)',
+                                        'rgba(96, 165, 250, 0.6)',
+                                        'rgba(148, 163, 184, 0.4)'
+                                    ],
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { position: 'right', labels: { color: axisColor() } } }
+                            }
+                        });
+                    })
+                    .catch(err => {
+                        console.error("Error loading dashboard data:", err);
+                        Object.values(stats).forEach(el => {
+                            el.textContent = "Error";
+                            el.classList.remove('skeleton');
+                        });
+                    });
+            });
+            {% endif %}
+        })();
+    </script>
+{% endblock %}
